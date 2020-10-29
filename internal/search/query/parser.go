@@ -1052,6 +1052,10 @@ func ProcessAndOr(in string, options ParserOptions) (QueryInfo, error) {
 	case SearchTypeRegex:
 		query = Map(query, escapeParensHeuristic, substituteConcat(fuzzyRegexp))
 	}
+	// TODO: this transformer actually needs to run after potential DNF
+	// expansion, like ConcatRevFilters, since subqueries may set a different
+	// type: context like type:symbol, for which patterns should not be translated.
+	query = Map(query, patternToCommitMessage)
 
 	if options.Globbing {
 		query, err = mapGlobToRegex(query)

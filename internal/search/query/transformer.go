@@ -686,3 +686,26 @@ func ellipsesForHoles(nodes []Node) []Node {
 		}
 	})
 }
+
+// patternToCommitMessage converts a pattern to a value of message: if
+// type:commit is set, ensuring that the pattern searches over the git commit
+// log.
+func patternToCommitMessage(nodes []Node) []Node {
+	runTransformer := exists(nodes, func(node Node) bool {
+		if n, ok := node.(Parameter); ok && n.Field == FieldType && n.Value == "commit" {
+			return true
+		}
+		return false
+	})
+	if runTransformer {
+		return MapPattern(nodes, func(value string, negated bool, annotation Annotation) Node {
+			return Parameter{
+				Field:      FieldMessage,
+				Value:      value,
+				Negated:    negated,
+				Annotation: annotation,
+			}
+		})
+	}
+	return nodes
+}

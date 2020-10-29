@@ -919,3 +919,35 @@ func TestConcatRevFiltersTopLevelAnd(t *testing.T) {
 		})
 	}
 }
+
+func TestPatternToCommitMessage(t *testing.T) {
+	cases := []struct {
+		input      string
+		want       string
+		searchType SearchType
+	}{
+		{
+			input:      "type:commit superman",
+			want:       `(and "type:commit" "message:superman")`,
+			searchType: SearchTypeRegex,
+		},
+		{
+			input:      "type:commit superman is better than batman (?)",
+			want:       `(and "type:commit" "message:(superman).*?(is).*?(better).*?(than).*?(batman).*?((?))")`,
+			searchType: SearchTypeRegex,
+		},
+		{
+			input:      "type:commit superman is better than batman (?)",
+			want:       `(and "type:commit" "message:superman is better than batman (?)")`,
+			searchType: SearchTypeLiteral,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.input, func(t *testing.T) {
+			query, _ := ProcessAndOr(c.input, ParserOptions{SearchType: c.searchType})
+			if diff := cmp.Diff(c.want, prettyPrint(query.(*AndOrQuery).Query)); diff != "" {
+				t.Error(diff)
+			}
+		})
+	}
+}
