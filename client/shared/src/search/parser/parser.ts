@@ -177,6 +177,7 @@ const zeroOrMore = (parseToken: Parser<Term>): Parser<Sequence> => (input, start
         }
         if (adjustedStart === result.token.range.end) {
             adjustedStart++
+            // something was not consumed, throw error hard.
             continue // empty token wtf?
         }
         end = result.token.range.end
@@ -548,7 +549,10 @@ const createParser = (terms: Parser<Token>[]): Parser<Sequence> =>
     zeroOrMore(
         oneOf<Term>(
             whitespace,
-            scanBalancedPattern(PatternKind.Regexp) /* introduces infinite loop (?) */,
+            followedBy(
+                scanBalancedPattern(PatternKind.Regexp),
+                oneOf<Whitespace | ClosingParen>(whitespace, closingParen)
+            ) /* introduces infinite loop (?) */,
             openingParen,
             closingParen,
             ...terms.map(token => followedBy(token, oneOf<Whitespace | ClosingParen>(whitespace, closingParen)))
