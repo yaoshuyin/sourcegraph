@@ -21,6 +21,19 @@ export const toMonacoRange = ({ start, end }: CharacterRange): IRange => ({
     endColumn: end + 1,
 })
 
+enum PatternKind {
+    Literal = 1,
+    Regexp,
+    Structural,
+}
+
+export interface Pattern {
+    type: 'pattern'
+    range: CharacterRange
+    kind: PatternKind
+    value: string
+}
+
 /**
  * Represents a literal in a search query.
  *
@@ -101,7 +114,7 @@ export interface ClosingParen {
     range: CharacterRange
 }
 
-export type Token = Whitespace | OpeningParen | ClosingParen | Operator | Comment | Literal | Filter | Quoted
+export type Token = Whitespace | OpeningParen | ClosingParen | Operator | Comment | Literal | Pattern | Filter | Quoted
 
 export type Term = Token | Sequence
 
