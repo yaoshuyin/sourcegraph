@@ -1,11 +1,11 @@
-import { parseSearchQuery, scanBalancedPattern } from './parser'
+import { parseSearchQuery, scanBalancedPattern, PatternKind } from './parser'
 
 describe('scanBalancedPattern()', () => {
     test('balanced', () => {
-        expect(scanBalancedPattern()('foo OR bar', 0)).toMatchInlineSnapshot(`
+        expect(scanBalancedPattern(PatternKind.Literal)('foo OR bar', 0)).toMatchInlineSnapshot(`
             Object {
               "token": Object {
-                "kind": 2,
+                "kind": 1,
                 "range": Object {
                   "end": 4,
                   "start": 0,
@@ -19,10 +19,10 @@ describe('scanBalancedPattern()', () => {
     })
 
     test('not a balanced pattern', () => {
-        expect(scanBalancedPattern()('(hello there)', 0)).toMatchInlineSnapshot(`
+        expect(scanBalancedPattern(PatternKind.Literal)('(hello there)', 0)).toMatchInlineSnapshot(`
             Object {
               "token": Object {
-                "kind": 2,
+                "kind": 1,
                 "range": Object {
                   "end": 13,
                   "start": 0,
@@ -36,10 +36,10 @@ describe('scanBalancedPattern()', () => {
     })
 
     test('not a balanced pattern with operator', () => {
-        expect(scanBalancedPattern()('( general:kenobi )', 0)).toMatchInlineSnapshot(`
+        expect(scanBalancedPattern(PatternKind.Literal)('( general:kenobi )', 0)).toMatchInlineSnapshot(`
             Object {
               "token": Object {
-                "kind": 2,
+                "kind": 1,
                 "range": Object {
                   "end": 18,
                   "start": 0,
@@ -53,7 +53,7 @@ describe('scanBalancedPattern()', () => {
     })
 
     test('not a balanced pattern with operator', () => {
-        expect(scanBalancedPattern()('(foo not bar)', 0)).toMatchInlineSnapshot(`
+        expect(scanBalancedPattern(PatternKind.Literal)('(foo not bar)', 0)).toMatchInlineSnapshot(`
             Object {
               "at": 5,
               "expected": "non-recognized filter or non-operator",
@@ -63,7 +63,7 @@ describe('scanBalancedPattern()', () => {
     })
 
     test('not a balanced pattern with operator', () => {
-        expect(scanBalancedPattern()('(foo OR bar)', 0)).toMatchInlineSnapshot(`
+        expect(scanBalancedPattern(PatternKind.Literal)('(foo OR bar)', 0)).toMatchInlineSnapshot(`
             Object {
               "at": 5,
               "expected": "non-recognized filter or non-operator",
@@ -73,7 +73,7 @@ describe('scanBalancedPattern()', () => {
     })
 
     test('not a balanced pattern with operator', () => {
-        expect(scanBalancedPattern()('(foo not bar)', 0)).toMatchInlineSnapshot(`
+        expect(scanBalancedPattern(PatternKind.Literal)('(foo not bar)', 0)).toMatchInlineSnapshot(`
             Object {
               "at": 5,
               "expected": "non-recognized filter or non-operator",
@@ -83,7 +83,7 @@ describe('scanBalancedPattern()', () => {
     })
 
     test('not a balanced pattern with operator', () => {
-        expect(scanBalancedPattern()('repo:foo AND bar', 0)).toMatchInlineSnapshot(`
+        expect(scanBalancedPattern(PatternKind.Literal)('repo:foo AND bar', 0)).toMatchInlineSnapshot(`
             Object {
               "at": 0,
               "expected": "non-recognized filter or non-operator",
@@ -93,7 +93,7 @@ describe('scanBalancedPattern()', () => {
     })
 
     test('not a balanced pattern with operator', () => {
-        expect(scanBalancedPattern()('repo:foo bar', 0)).toMatchInlineSnapshot(`
+        expect(scanBalancedPattern(PatternKind.Literal)('repo:foo bar', 0)).toMatchInlineSnapshot(`
             Object {
               "at": 0,
               "expected": "non-recognized filter or non-operator",

@@ -21,7 +21,7 @@ export const toMonacoRange = ({ start, end }: CharacterRange): IRange => ({
     endColumn: end + 1,
 })
 
-enum PatternKind {
+export enum PatternKind {
     Literal = 1,
     Regexp,
     Structural,
@@ -243,8 +243,9 @@ const keepScanning = (input: string, start: number): boolean =>
         ? false
         : followedBy(operator, whitespace)(input, start).type !== 'success'
 
-export const scanBalancedPattern = (): Parser<Pattern> =>
+export const scanBalancedPattern = (patternKind: PatternKind): Parser<Pattern> =>
     function (input, start) {
+        console.debug('balanced')
         let adjustedStart = start
         let balanced = 0
         let current = ''
@@ -333,7 +334,7 @@ export const scanBalancedPattern = (): Parser<Pattern> =>
                     start,
                     end: adjustedStart,
                 },
-                kind: PatternKind.Regexp, // FIXME
+                kind: patternKind,
                 value: result.join(''),
             },
         }
@@ -359,7 +360,7 @@ const scanPattern = (patternKind: PatternKind): Parser<Pattern> => (input, start
         }
     }
 
-    const balancedPattern = scanBalancedPattern()(input, start)
+    const balancedPattern = scanBalancedPattern(patternKind)(input, start)
     if (balancedPattern.type === 'success') {
         return {
             type: 'success',
@@ -414,6 +415,7 @@ const scanToken = <T extends Term = Literal>(
         regexp = new RegExp(`^${regexp.source}`, regexp.flags)
     }
     return (input, start) => {
+        console.debug('yo')
         const matchTarget = input.slice(Math.max(0, start))
         if (!matchTarget) {
             return { type: 'error', expected: expected || `/${regexp.source}/`, at: start }
@@ -524,12 +526,19 @@ const filter: Parser<Filter> = (input, start) => {
     }
 }
 
-const baseTerms: Parser<Token>[] = [operator, filter, quoted('"'), quoted("'"), literal]
+const baseTerms: Parser<Token>[] = [
+    operator,
+    filter,
+    quoted('"'),
+    quoted("'"),
+    /* pattern(PatternKind.Regexp),*/ literal,
+]
 
 const createParser = (terms: Parser<Token>[]): Parser<Sequence> =>
     zeroOrMore(
         oneOf<Term>(
             whitespace,
+            scanBalancedPattern(PatternKind.Regexp) /* introduces infinite loop (?) */,
             openingParen,
             closingParen,
             ...terms.map(token => followedBy(token, oneOf<Whitespace | ClosingParen>(whitespace, closingParen)))
@@ -551,6 +560,6 @@ const searchQueryWithComments = createParser([comment, ...baseTerms])
  */
 export const parseSearchQuery = (
     query: string,
-    defaultPatternKind?: PatternKind,
+    //    defaultPatternKind?: PatternKind,
     interpretComments?: boolean
 ): ParserResult<Sequence> => (interpretComments ? searchQueryWithComments(query, 0) : searchQuery(query, 0))
