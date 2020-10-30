@@ -1,4 +1,107 @@
-import { parseSearchQuery } from './parser'
+import { parseSearchQuery, scanBalancedPattern } from './parser'
+
+describe('scanBalancedPattern()', () => {
+    test('balanced', () => {
+        expect(scanBalancedPattern()('foo OR bar', 0)).toMatchInlineSnapshot(`
+            Object {
+              "token": Object {
+                "kind": 2,
+                "range": Object {
+                  "end": 4,
+                  "start": 0,
+                },
+                "type": "pattern",
+                "value": "foo",
+              },
+              "type": "success",
+            }
+        `)
+    })
+
+    test('not a balanced pattern', () => {
+        expect(scanBalancedPattern()('(hello there)', 0)).toMatchInlineSnapshot(`
+            Object {
+              "token": Object {
+                "kind": 2,
+                "range": Object {
+                  "end": 13,
+                  "start": 0,
+                },
+                "type": "pattern",
+                "value": "(hello there)",
+              },
+              "type": "success",
+            }
+        `)
+    })
+
+    test('not a balanced pattern with operator', () => {
+        expect(scanBalancedPattern()('( general:kenobi )', 0)).toMatchInlineSnapshot(`
+            Object {
+              "token": Object {
+                "kind": 2,
+                "range": Object {
+                  "end": 18,
+                  "start": 0,
+                },
+                "type": "pattern",
+                "value": "( general:kenobi )",
+              },
+              "type": "success",
+            }
+        `)
+    })
+
+    test('not a balanced pattern with operator', () => {
+        expect(scanBalancedPattern()('(foo not bar)', 0)).toMatchInlineSnapshot(`
+            Object {
+              "at": 5,
+              "expected": "non-recognized filter or non-operator",
+              "type": "error",
+            }
+        `)
+    })
+
+    test('not a balanced pattern with operator', () => {
+        expect(scanBalancedPattern()('(foo OR bar)', 0)).toMatchInlineSnapshot(`
+            Object {
+              "at": 5,
+              "expected": "non-recognized filter or non-operator",
+              "type": "error",
+            }
+        `)
+    })
+
+    test('not a balanced pattern with operator', () => {
+        expect(scanBalancedPattern()('(foo not bar)', 0)).toMatchInlineSnapshot(`
+            Object {
+              "at": 5,
+              "expected": "non-recognized filter or non-operator",
+              "type": "error",
+            }
+        `)
+    })
+
+    test('not a balanced pattern with operator', () => {
+        expect(scanBalancedPattern()('repo:foo AND bar', 0)).toMatchInlineSnapshot(`
+            Object {
+              "at": 0,
+              "expected": "non-recognized filter or non-operator",
+              "type": "error",
+            }
+        `)
+    })
+
+    test('not a balanced pattern with operator', () => {
+        expect(scanBalancedPattern()('repo:foo bar', 0)).toMatchInlineSnapshot(`
+            Object {
+              "at": 0,
+              "expected": "non-recognized filter or non-operator",
+              "type": "error",
+            }
+        `)
+    })
+})
 
 describe('parseSearchQuery()', () => {
     test('empty', () =>

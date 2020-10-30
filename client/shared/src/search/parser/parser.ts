@@ -238,8 +238,109 @@ const character = (character: string): Parser<Literal> => (input, start) => {
     }
 }
 
-const scanPattern = (): Parser<Pattern> =>
+const keepScanning = (input: string, start: number): boolean =>
+    filterKeyword(input, start).type === 'success'
+        ? false
+        : followedBy(operator, whitespace)(input, start).type !== 'success'
+
+export const scanBalancedPattern = (): Parser<Pattern> =>
     function (input, start) {
+        let adjustedStart = start
+        let balanced = 0
+        let current = ''
+        const result: string[] = []
+
+        const nextChar = (): string => {
+            current = input[adjustedStart]
+            adjustedStart++
+            return current
+        }
+
+        if (!keepScanning(input, adjustedStart)) {
+            return {
+                type: 'error',
+                expected: 'non-recognized filter or non-operator',
+                at: adjustedStart,
+            }
+        }
+
+        while (input[adjustedStart] !== undefined) {
+            current = nextChar()
+            if (current === ' ' && balanced === 0) {
+                // Stop scanning a potential pattern when we see
+                // whitespace in a balanced state.
+                break
+            } else if (current === '(') {
+                if (!keepScanning(input, adjustedStart)) {
+                    return {
+                        type: 'error',
+                        expected: 'non-recognized filter or non-operator',
+                        at: adjustedStart,
+                    }
+                }
+                balanced++
+                result.push(current)
+            } else if (current === ')') {
+                balanced--
+                if (balanced < 0) {
+                    // This paren is an unmatched closing paren, so
+                    // we stop treating it as a potential pattern
+                    // here--it might be closing a group.
+                    adjustedStart-- // Backtrack
+                    balanced = 0 // Pattern is balanced up to this point
+                    break
+                }
+                result.push(current)
+            } else if (current === ' ') {
+                if (!keepScanning(input, adjustedStart)) {
+                    return {
+                        type: 'error',
+                        expected: 'non-recognized filter or non-operator',
+                        at: adjustedStart,
+                    }
+                }
+                result.push(current)
+            } else if (current === '\\') {
+                if (input[adjustedStart] !== undefined) {
+                    current = nextChar()
+                    // Accept anything anything escaped. The point
+                    // is to consume escaped spaces like "\ " so
+                    // that we don't recognize it as terminating a
+                    // pattern.
+                    result.push('\\', current)
+                    continue
+                }
+                result.push(current)
+            } else {
+                result.push(current)
+            }
+        }
+
+        // if unbalanced, return error
+        if (balanced !== 0) {
+            return {
+                type: 'error',
+                expected: 'balanced parentheses for balanced pattern',
+                at: adjustedStart,
+            }
+        }
+
+        return {
+            type: 'success',
+            token: {
+                type: 'pattern',
+                range: {
+                    start,
+                    end: adjustedStart,
+                },
+                kind: PatternKind.Regexp, // FIXME
+                value: result.join(''),
+            },
+        }
+    }
+
+const scanPattern = (): Parser<Pattern> =>
+    function (_input, _start) {
         return {
             type: 'success',
             token: {
