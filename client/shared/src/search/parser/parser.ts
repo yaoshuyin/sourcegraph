@@ -242,7 +242,7 @@ const character = (character: string): Parser<Literal> => (input, start) => {
  * Returns a {@link Parser} that will attempt to parse
  * tokens matching the given RegExp pattern in a search query.
  */
-const pattern = <T extends Term = Literal>(
+const scanToken = <T extends Term = Literal>(
     regexp: RegExp,
     output?: T | ((input: string, range: CharacterRange) => T),
     expected?: string
@@ -271,7 +271,7 @@ const pattern = <T extends Term = Literal>(
     }
 }
 
-const whitespace = pattern(
+const whitespace = scanToken(
     /\s+/,
     (_input, range): Whitespace => ({
         type: 'whitespace',
@@ -279,27 +279,27 @@ const whitespace = pattern(
     })
 )
 
-const literal = pattern(/[^\s)]+/)
+const literal = scanToken(/[^\s)]+/)
 
-const operator = pattern(
+const operator = scanToken(
     /(and|AND|or|OR|not|NOT)/,
     (input, { start, end }): Operator => ({ type: 'operator', value: input.slice(start, end), range: { start, end } })
 )
 
-const comment = pattern(
+const comment = scanToken(
     /\/\/.*/,
     (input, { start, end }): Comment => ({ type: 'comment', value: input.slice(start, end), range: { start, end } })
 )
 
-const filterKeyword = pattern(new RegExp(`-?(${filterTypeKeysWithAliases.join('|')})+(?=:)`, 'i'))
+const filterKeyword = scanToken(new RegExp(`-?(${filterTypeKeysWithAliases.join('|')})+(?=:)`, 'i'))
 
 const filterDelimiter = character(':')
 
 const filterValue = oneOf<Quoted | Literal>(quoted, literal)
 
-const openingParen = pattern(/\(/, (_input, range): OpeningParen => ({ type: 'openingParen', range }))
+const openingParen = scanToken(/\(/, (_input, range): OpeningParen => ({ type: 'openingParen', range }))
 
-const closingParen = pattern(/\)/, (_input, range): ClosingParen => ({ type: 'closingParen', range }))
+const closingParen = scanToken(/\)/, (_input, range): ClosingParen => ({ type: 'closingParen', range }))
 
 /**
  * Returns a {@link Parser} that succeeds if a token parsed by `parseToken`,
