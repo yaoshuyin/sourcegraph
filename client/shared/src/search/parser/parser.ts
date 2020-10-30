@@ -242,6 +242,8 @@ const keepScanning = (input: string, start: number): boolean =>
     filterKeyword(input, start).type === 'success'
         ? false
         : followedBy(operator, whitespace)(input, start).type !== 'success'
+// TODO: whitespace, operator, whitespace
+// (not -> paren, operator
 
 export const scanBalancedPattern = (patternKind: PatternKind): Parser<Pattern> =>
     function (input, start) {
@@ -257,11 +259,11 @@ export const scanBalancedPattern = (patternKind: PatternKind): Parser<Pattern> =
             return current
         }
 
-        if (!keepScanning(input, adjustedStart)) {
+        if (!keepScanning(input, start)) {
             return {
                 type: 'error',
                 expected: 'non-recognized filter or non-operator',
-                at: adjustedStart,
+                at: start,
             }
         }
 
@@ -270,6 +272,7 @@ export const scanBalancedPattern = (patternKind: PatternKind): Parser<Pattern> =
             if (current === ' ' && balanced === 0) {
                 // Stop scanning a potential pattern when we see
                 // whitespace in a balanced state.
+                adjustedStart-- // Backtrack.
                 break
             } else if (current === '(') {
                 if (!keepScanning(input, adjustedStart)) {
@@ -415,7 +418,6 @@ const scanToken = <T extends Term = Literal>(
         regexp = new RegExp(`^${regexp.source}`, regexp.flags)
     }
     return (input, start) => {
-        console.debug('yo')
         const matchTarget = input.slice(Math.max(0, start))
         if (!matchTarget) {
             return { type: 'error', expected: expected || `/${regexp.source}/`, at: start }
@@ -529,9 +531,10 @@ const filter: Parser<Filter> = (input, start) => {
 const baseTerms: Parser<Token>[] = [
     operator,
     filter,
-    quoted('"'),
-    quoted("'"),
-    /* pattern(PatternKind.Regexp),*/ literal,
+    //    quoted('"'),
+    //    quoted("'"),
+    // pattern(PatternKind.Regexp),
+    // literal,
 ]
 
 const createParser = (terms: Parser<Token>[]): Parser<Sequence> =>

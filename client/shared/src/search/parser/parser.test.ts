@@ -7,7 +7,7 @@ describe('scanBalancedPattern()', () => {
               "token": Object {
                 "kind": 1,
                 "range": Object {
-                  "end": 4,
+                  "end": 3,
                   "start": 0,
                 },
                 "type": "pattern",
@@ -104,6 +104,184 @@ describe('scanBalancedPattern()', () => {
 })
 
 describe('parseSearchQuery()', () => {
+    test('empty', () =>
+        expect(parseSearchQuery('(this is pattern)')).toMatchInlineSnapshot(`
+            Object {
+              "token": Object {
+                "members": Array [
+                  Object {
+                    "kind": 2,
+                    "range": Object {
+                      "end": 17,
+                      "start": 0,
+                    },
+                    "type": "pattern",
+                    "value": "(this is pattern)",
+                  },
+                ],
+                "range": Object {
+                  "end": 17,
+                  "start": 0,
+                },
+                "type": "sequence",
+              },
+              "type": "success",
+            }
+        `))
+
+    test('different', () =>
+        expect(parseSearchQuery('(this is pattern) (another pattern)')).toMatchInlineSnapshot(`
+            Object {
+              "token": Object {
+                "members": Array [
+                  Object {
+                    "kind": 2,
+                    "range": Object {
+                      "end": 17,
+                      "start": 0,
+                    },
+                    "type": "pattern",
+                    "value": "(this is pattern)",
+                  },
+                  Object {
+                    "range": Object {
+                      "end": 18,
+                      "start": 17,
+                    },
+                    "type": "whitespace",
+                  },
+                  Object {
+                    "kind": 2,
+                    "range": Object {
+                      "end": 35,
+                      "start": 18,
+                    },
+                    "type": "pattern",
+                    "value": "(another pattern)",
+                  },
+                ],
+                "range": Object {
+                  "end": 35,
+                  "start": 0,
+                },
+                "type": "sequence",
+              },
+              "type": "success",
+            }
+        `))
+
+    test('different', () =>
+        expect(parseSearchQuery('repo:foo (this is pattern) file:bar (another pattern)')).toMatchInlineSnapshot(`
+            Object {
+              "token": Object {
+                "members": Array [
+                  Object {
+                    "filterType": Object {
+                      "range": Object {
+                        "end": 4,
+                        "start": 0,
+                      },
+                      "type": "literal",
+                      "value": "repo",
+                    },
+                    "filterValue": Object {
+                      "range": Object {
+                        "end": 8,
+                        "start": 5,
+                      },
+                      "type": "literal",
+                      "value": "foo",
+                    },
+                    "range": Object {
+                      "end": 8,
+                      "start": 0,
+                    },
+                    "type": "filter",
+                  },
+                  Object {
+                    "range": Object {
+                      "end": 9,
+                      "start": 8,
+                    },
+                    "type": "whitespace",
+                  },
+                  Object {
+                    "kind": 2,
+                    "range": Object {
+                      "end": 26,
+                      "start": 9,
+                    },
+                    "type": "pattern",
+                    "value": "(this is pattern)",
+                  },
+                  Object {
+                    "range": Object {
+                      "end": 27,
+                      "start": 26,
+                    },
+                    "type": "whitespace",
+                  },
+                  Object {
+                    "filterType": Object {
+                      "range": Object {
+                        "end": 31,
+                        "start": 27,
+                      },
+                      "type": "literal",
+                      "value": "file",
+                    },
+                    "filterValue": Object {
+                      "range": Object {
+                        "end": 35,
+                        "start": 32,
+                      },
+                      "type": "literal",
+                      "value": "bar",
+                    },
+                    "range": Object {
+                      "end": 35,
+                      "start": 27,
+                    },
+                    "type": "filter",
+                  },
+                  Object {
+                    "range": Object {
+                      "end": 36,
+                      "start": 35,
+                    },
+                    "type": "whitespace",
+                  },
+                  Object {
+                    "kind": 2,
+                    "range": Object {
+                      "end": 53,
+                      "start": 36,
+                    },
+                    "type": "pattern",
+                    "value": "(another pattern)",
+                  },
+                ],
+                "range": Object {
+                  "end": 53,
+                  "start": 0,
+                },
+                "type": "sequence",
+              },
+              "type": "success",
+            }
+        `))
+    /*
+    test('other', () =>
+        expect(parseSearchQuery('(a or b)')).toMatchInlineSnapshot(`
+            Object {
+              "at": 3,
+              "expected": "One of: /^\\\\s+/, non-recognized filter or non-operator, /^\\\\(/, /^\\\\)/",
+              "type": "error",
+            }
+        `))
+        */
+
+    /*
     test('empty', () =>
         expect(parseSearchQuery('')).toMatchObject({
             token: {
@@ -943,4 +1121,5 @@ thing`
             type: 'success',
         })
     })
+    */
 })
