@@ -339,21 +339,67 @@ export const scanBalancedPattern = (): Parser<Pattern> =>
         }
     }
 
-const scanPattern = (): Parser<Pattern> =>
-    function (_input, _start) {
+const scanPattern = (patternKind: PatternKind): Parser<Pattern> => (input, start) => {
+    if (patternKind === PatternKind.Regexp) {
+        // If regexp, first scan for quoted patterns like "foo" and /foo/.
+        const delimitedPattern = oneOf<Quoted>(quoted('"'), quoted("'"), quoted('/'))(input, start)
+        if (delimitedPattern.type === 'success') {
+            return {
+                type: 'success',
+                token: {
+                    type: 'pattern',
+                    range: {
+                        start,
+                        end: delimitedPattern.token.range.end,
+                    },
+                    kind: patternKind,
+                    value: delimitedPattern.token.quotedValue,
+                },
+            }
+        }
+    }
+
+    const balancedPattern = scanBalancedPattern()(input, start)
+    if (balancedPattern.type === 'success') {
         return {
             type: 'success',
             token: {
                 type: 'pattern',
                 range: {
-                    start: 0,
-                    end: 1,
+                    start,
+                    end: balancedPattern.token.range.end,
                 },
-                kind: PatternKind.Regexp,
-                value: 'foo',
+                kind: patternKind,
+                value: balancedPattern.token.value,
             },
         }
     }
+
+    // TODO: in regexp mode parentheses are escapable and should not stop at )
+    // like literal pattern does below. Handle later.
+
+    const anyPattern = literal(input, start)
+    if (anyPattern.type === 'success') {
+        return {
+            type: 'success',
+            token: {
+                type: 'pattern',
+                range: {
+                    start,
+                    end: anyPattern.token.range.end,
+                },
+                kind: patternKind,
+                value: anyPattern.token.value,
+            },
+        }
+    }
+
+    return {
+        type: 'error',
+        expected: 'unreachable, I think',
+        at: start,
+    }
+}
 
 /**
  * Returns a {@link Parser} that will attempt to parse
@@ -418,7 +464,7 @@ const openingParen = scanToken(/\(/, (_input, range): OpeningParen => ({ type: '
 
 const closingParen = scanToken(/\)/, (_input, range): ClosingParen => ({ type: 'closingParen', range }))
 
-const pattern: Parser<Pattern> = scanPattern()
+const pattern = (patternKind: PatternKind): Parser<Pattern> => scanPattern(patternKind)
 
 /**
  * Returns a {@link Parser} that succeeds if a token parsed by `parseToken`,
@@ -503,5 +549,8 @@ const searchQueryWithComments = createParser([comment, ...baseTerms])
 /**
  * Parses a search query string.
  */
-export const parseSearchQuery = (query: string, interpretComments?: boolean): ParserResult<Sequence> =>
-    interpretComments ? searchQueryWithComments(query, 0) : searchQuery(query, 0)
+export const parseSearchQuery = (
+    query: string,
+    defaultPatternKind?: PatternKind,
+    interpretComments?: boolean
+): ParserResult<Sequence> => (interpretComments ? searchQueryWithComments(query, 0) : searchQuery(query, 0))
