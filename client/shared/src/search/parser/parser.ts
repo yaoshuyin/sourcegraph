@@ -175,6 +175,10 @@ const zeroOrMore = (parseToken: Parser<Term>): Parser<Sequence> => (input, start
         } else {
             members.push(result.token)
         }
+        if (adjustedStart === result.token.range.end) {
+            adjustedStart++
+            continue // empty token wtf?
+        }
         end = result.token.range.end
         adjustedStart = end
     }
@@ -238,10 +242,13 @@ const character = (character: string): Parser<Literal> => (input, start) => {
     }
 }
 
-const keepScanning = (input: string, start: number): boolean =>
-    filterKeyword(input, start).type === 'success'
-        ? false
-        : followedBy(operator, whitespace)(input, start).type !== 'success'
+const keepScanning = (input: string, start: number): boolean => {
+    const result = oneOf<Literal | Sequence>(filterKeyword, followedBy(operator, whitespace))(input, start)
+    if (result.type === 'success') {
+        return false
+    }
+    return true
+}
 // TODO: whitespace, operator, whitespace
 // (not -> paren, operator
 

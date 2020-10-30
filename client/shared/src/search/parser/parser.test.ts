@@ -105,22 +105,69 @@ describe('scanBalancedPattern()', () => {
 
 describe('parseSearchQuery()', () => {
     test('empty', () =>
-        expect(parseSearchQuery('(this is pattern)')).toMatchInlineSnapshot(`
+        expect(parseSearchQuery('(a or b)')).toMatchInlineSnapshot(`
             Object {
               "token": Object {
                 "members": Array [
                   Object {
-                    "kind": 2,
                     "range": Object {
-                      "end": 17,
+                      "end": 1,
                       "start": 0,
                     },
+                    "type": "openingParen",
+                  },
+                  Object {
+                    "kind": 2,
+                    "range": Object {
+                      "end": 2,
+                      "start": 1,
+                    },
                     "type": "pattern",
-                    "value": "(this is pattern)",
+                    "value": "a",
+                  },
+                  Object {
+                    "range": Object {
+                      "end": 3,
+                      "start": 2,
+                    },
+                    "type": "whitespace",
+                  },
+                  Object {
+                    "range": Object {
+                      "end": 5,
+                      "start": 3,
+                    },
+                    "type": "operator",
+                    "value": "or",
+                  },
+                  Object {
+                    "range": Object {
+                      "end": 6,
+                      "start": 5,
+                    },
+                    "type": "whitespace",
+                  },
+                  Object {
+                    "kind": 2,
+                    "range": Object {
+                      "end": 7,
+                      "start": 6,
+                    },
+                    "type": "pattern",
+                    "value": "b",
+                  },
+                  Object {
+                    "kind": 2,
+                    "range": Object {
+                      "end": 7,
+                      "start": 7,
+                    },
+                    "type": "pattern",
+                    "value": "",
                   },
                 ],
                 "range": Object {
-                  "end": 17,
+                  "end": 7,
                   "start": 0,
                 },
                 "type": "sequence",
@@ -128,20 +175,73 @@ describe('parseSearchQuery()', () => {
               "type": "success",
             }
         `))
-
+    /*
     test('different', () =>
-        expect(parseSearchQuery('(this is pattern) (another pattern)')).toMatchInlineSnapshot(`
+        expect(parseSearchQuery('(this repo:foo is pattern) (another pattern)')).toMatchInlineSnapshot(`
             Object {
               "token": Object {
                 "members": Array [
                   Object {
+                    "range": Object {
+                      "end": 1,
+                      "start": 0,
+                    },
+                    "type": "openingParen",
+                  },
+                  Object {
+                    "kind": 2,
+                    "range": Object {
+                      "end": 5,
+                      "start": 1,
+                    },
+                    "type": "pattern",
+                    "value": "this",
+                  },
+                  Object {
+                    "range": Object {
+                      "end": 6,
+                      "start": 5,
+                    },
+                    "type": "whitespace",
+                  },
+                  Object {
+                    "filterType": Object {
+                      "range": Object {
+                        "end": 10,
+                        "start": 6,
+                      },
+                      "type": "literal",
+                      "value": "repo",
+                    },
+                    "filterValue": Object {
+                      "range": Object {
+                        "end": 14,
+                        "start": 11,
+                      },
+                      "type": "literal",
+                      "value": "foo",
+                    },
+                    "range": Object {
+                      "end": 14,
+                      "start": 6,
+                    },
+                    "type": "filter",
+                  },
+                  Object {
+                    "range": Object {
+                      "end": 15,
+                      "start": 14,
+                    },
+                    "type": "whitespace",
+                  },
+                  Object {
                     "kind": 2,
                     "range": Object {
                       "end": 17,
-                      "start": 0,
+                      "start": 15,
                     },
                     "type": "pattern",
-                    "value": "(this is pattern)",
+                    "value": "is",
                   },
                   Object {
                     "range": Object {
@@ -153,15 +253,40 @@ describe('parseSearchQuery()', () => {
                   Object {
                     "kind": 2,
                     "range": Object {
-                      "end": 35,
+                      "end": 25,
                       "start": 18,
+                    },
+                    "type": "pattern",
+                    "value": "pattern",
+                  },
+                  Object {
+                    "kind": 2,
+                    "range": Object {
+                      "end": 25,
+                      "start": 25,
+                    },
+                    "type": "pattern",
+                    "value": "",
+                  },
+                  Object {
+                    "range": Object {
+                      "end": 27,
+                      "start": 26,
+                    },
+                    "type": "whitespace",
+                  },
+                  Object {
+                    "kind": 2,
+                    "range": Object {
+                      "end": 44,
+                      "start": 27,
                     },
                     "type": "pattern",
                     "value": "(another pattern)",
                   },
                 ],
                 "range": Object {
-                  "end": 35,
+                  "end": 44,
                   "start": 0,
                 },
                 "type": "sequence",
@@ -270,6 +395,7 @@ describe('parseSearchQuery()', () => {
               "type": "success",
             }
         `))
+        */
     /*
     test('other', () =>
         expect(parseSearchQuery('(a or b)')).toMatchInlineSnapshot(`
