@@ -157,17 +157,15 @@ describe('parseSearchQuery()', () => {
                     "value": "b",
                   },
                   Object {
-                    "kind": 2,
                     "range": Object {
-                      "end": 7,
+                      "end": 8,
                       "start": 7,
                     },
-                    "type": "pattern",
-                    "value": "",
+                    "type": "closingParen",
                   },
                 ],
                 "range": Object {
-                  "end": 7,
+                  "end": 8,
                   "start": 0,
                 },
                 "type": "sequence",
