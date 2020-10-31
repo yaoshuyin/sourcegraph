@@ -32,6 +32,8 @@ monaco.editor.defineTheme(SOURCEGRAPH_DARK, {
     },
     rules: [
         { token: 'identifier', foreground: '#f2f4f8' },
+        { token: 'pattern', foreground: '#f2f4f8' },
+        { token: 'paren', foreground: '#da77f2' },
         { token: 'keyword', foreground: '#569cd6' },
         { token: 'operator', foreground: '#da77f2' },
         { token: 'comment', foreground: '#ffa94d' },
