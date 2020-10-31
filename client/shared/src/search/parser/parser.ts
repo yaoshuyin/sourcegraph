@@ -1,5 +1,7 @@
 import { IRange } from 'monaco-editor'
 import { filterTypeKeysWithAliases } from '../interactive/util'
+import { RegExpParser, visitRegExpAST } from 'regexpp'
+import * as regexNode from 'regexpp/ast'
 
 /**
  * Represents a zero-indexed character range in a single-line search query.
@@ -21,10 +23,16 @@ export const toMonacoRange = ({ start, end }: CharacterRange): IRange => ({
     endColumn: end + 1,
 })
 
-enum PatternKind {
+export enum PatternKind {
     Literal = 1,
     Regexp,
     Structural,
+}
+
+export interface RegexpMeta {
+    type: 'regexpmeta'
+    range: CharacterRange
+    value: string
 }
 
 export interface Pattern {
@@ -114,7 +122,17 @@ export interface ClosingParen {
     range: CharacterRange
 }
 
-export type Token = Whitespace | OpeningParen | ClosingParen | Operator | Comment | Literal | Pattern | Filter | Quoted
+export type Token =
+    | Whitespace
+    | OpeningParen
+    | ClosingParen
+    | Operator
+    | Comment
+    | Literal
+    | Pattern
+    | Filter
+    | Quoted
+    | RegexpMeta
 
 export type Term = Token | Sequence
 
@@ -561,6 +579,44 @@ const searchQueryWithComments = (patternKind: PatternKind): Parser<Sequence> =>
         )
     )
 
+const patternToRegexp = (tokens: ParserResult<Sequence>): ParserResult<Sequence> => {
+    if (tokens.type === 'error') {
+        return tokens
+    }
+    const newMembers: Token[] = []
+    for (const token of tokens.token.members) {
+        if (token.type === 'pattern') {
+            const ast = new RegExpParser().parsePattern(token.value)
+            if (ast) {
+                visitRegExpAST(ast, {
+                    onQuantifierEnter(node: regexNode.Quantifier) {
+                        console.log(`start: ${node.start} end: ${node.end} length: ${node.end - node.start}`)
+                        console.log(`raw: ${node.raw}`)
+                        newMembers.push({
+                            type: 'regexpmeta', // FIXME
+                            range: { start: node.start, end: node.end },
+                            value: node.raw,
+                            //                        kind: PatternKind.Regexp, // FIXME
+                        })
+                    },
+                })
+            } else {
+                newMembers.push(token)
+            }
+        } else {
+            newMembers.push(token)
+        }
+    }
+    return {
+        type: 'success',
+        token: {
+            type: 'sequence',
+            range: tokens.token.range,
+            members: newMembers,
+        },
+    }
+}
+
 /**
  * Parses a search query string.
  */
@@ -569,4 +625,6 @@ export const parseSearchQuery = (
     interpretComments?: boolean,
     patternKind: PatternKind = PatternKind.Literal
 ): ParserResult<Sequence> =>
-    interpretComments ? searchQueryWithComments(patternKind)(query, 0) : searchQuery(patternKind)(query, 0)
+    patternToRegexp(
+        interpretComments ? searchQueryWithComments(patternKind)(query, 0) : searchQuery(patternKind)(query, 0)
+    )

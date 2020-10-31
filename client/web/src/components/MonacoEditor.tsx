@@ -29,10 +29,12 @@ monaco.editor.defineTheme(SOURCEGRAPH_DARK, {
         'editorHoverWidget.background': '#1c2736',
         'editorHoverWidget.foreground': '#F2F4F8',
         'editorHoverWidget.border': '#2b3750',
+        'editor.hoverHighlightBackground': '#ffffff',
     },
     rules: [
         { token: 'identifier', foreground: '#f2f4f8' },
         { token: 'pattern', foreground: '#f2f4f8' },
+        { token: 'regexpmeta', foreground: '#ff6666' },
         { token: 'paren', foreground: '#da77f2' },
         { token: 'keyword', foreground: '#569cd6' },
         { token: 'operator', foreground: '#da77f2' },

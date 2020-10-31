@@ -41,6 +41,12 @@ export function getMonacoTokens(parsedQuery: Pick<Sequence, 'members'>): Monaco.
                     scopes: 'paren',
                 })
                 break
+            case 'regexpmeta':
+                tokens.push({
+                    startIndex: token.range.start,
+                    scopes: 'regexpmeta',
+                })
+                break
             case 'operator':
                 tokens.push({
                     startIndex: token.range.start,
