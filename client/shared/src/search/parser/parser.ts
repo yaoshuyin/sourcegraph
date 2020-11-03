@@ -360,6 +360,16 @@ const filter: Parser<Filter> = (input, start) => {
     }
 }
 
+const createPattern = (value: string, range: CharacterRange, kind: PatternKind): ParseSuccess<Pattern> => ({
+    type: 'success',
+    token: {
+        type: 'pattern',
+        range,
+        kind,
+        value,
+    },
+})
+
 const scanFilterOrOperator = oneOf<Literal | Sequence>(filterKeyword, followedBy(operator, whitespace))
 const keepScanning = (input: string, start: number): boolean => scanFilterOrOperator(input, start).type !== 'success'
 
@@ -384,7 +394,7 @@ const keepScanning = (input: string, start: number): boolean => scanFilterOrOper
  * (foo or (bar and baz)) - a valid query with and/or expression groups in the query langugae
  * (repo:foo bar baz)     - a valid query containing a recognized repo: field. Here parentheses are interpreted as a group, not a pattern.
  */
-export const scanBalancedPattern: Parser<Literal> = (input, start) => {
+export const scanBalancedPattern = (kind = PatternKind.Literal): Parser<Pattern> => (input, start) => {
     let adjustedStart = start
     let balanced = 0
     let current = ''
@@ -460,43 +470,66 @@ export const scanBalancedPattern: Parser<Literal> = (input, start) => {
         }
     }
 
-    return {
-        type: 'success',
-        token: {
-            type: 'literal',
-            range: {
-                start,
-                end: adjustedStart,
-            },
-            value: result.join(''),
-        },
-    }
+    return createPattern(result.join(''), { start, end: adjustedStart }, kind)
 }
 
-const baseTerms: Parser<Token>[] = [operator, filter, quoted('"'), quoted("'"), literal]
+const scanPattern = (kind: PatternKind): Parser<Pattern> => (input, start) => {
+    if (kind === PatternKind.Regexp) {
+        // If regexp, first scan for quoted patterns like "foo" and /foo/.
+        const delimitedPattern = oneOf<Quoted>(quoted('"'), quoted("'"), quoted('/'))(input, start)
+        if (delimitedPattern.type === 'success') {
+            return createPattern(delimitedPattern.token.quotedValue, delimitedPattern.token.range, kind)
+        }
+    }
 
-const createParser = (terms: Parser<Token>[]): Parser<Sequence> =>
-    zeroOrMore(
+    const balancedPattern = scanBalancedPattern(kind)(input, start)
+    if (balancedPattern.type === 'success') {
+        return createPattern(balancedPattern.token.value, balancedPattern.token.range, kind)
+    }
+
+    // TODO:
+    // if (regex mode) {
+    //      interpret escape sequences for (, )
+    // } else (literal, structural) {
+    //    any pattern
+    // }
+    const anyPattern = literal(input, start)
+    if (anyPattern.type === 'success') {
+        return createPattern(anyPattern.token.value, anyPattern.token.range, kind)
+    }
+
+    return anyPattern
+}
+
+/**
+ * A {@link Parser} for a Sourcegraph search query, interpreting patterns for {@link PatternKind}.
+ *
+ * @param interpretComments Interpets C-style line comments for multiline queries.
+ */
+const createParser = (kind: PatternKind, interpretComments?: boolean): Parser<Sequence> => {
+    const baseScanner: Parser<Token>[] = [operator, filter, scanPattern(kind), literal]
+    const terminalScanner: Parser<Token>[] = interpretComments ? [comment, ...baseScanner] : baseScanner
+    return zeroOrMore(
         oneOf<Term>(
             whitespace,
+            followedBy(scanBalancedPattern(kind), oneOf<Whitespace | ClosingParen>(whitespace, closingParen)),
             openingParen,
             closingParen,
-            ...terms.map(token => followedBy(token, oneOf<Whitespace | ClosingParen>(whitespace, closingParen)))
+            ...terminalScanner.map(token =>
+                followedBy(token, oneOf<Whitespace | ClosingParen>(whitespace, closingParen))
+            )
         )
     )
-
-/**
- * A {@link Parser} for a Sourcegraph search query.
- */
-const searchQuery = createParser(baseTerms)
-
-/**
- * A {@link Parser} for a Sourcegraph search query containing comments.
- */
-const searchQueryWithComments = createParser([comment, ...baseTerms])
+}
 
 /**
  * Parses a search query string.
  */
-export const parseSearchQuery = (query: string, interpretComments?: boolean): ParserResult<Sequence> =>
-    interpretComments ? searchQueryWithComments(query, 0) : searchQuery(query, 0)
+export const parseSearchQuery = (
+    query: string,
+    interpretComments?: boolean,
+    kind = PatternKind.Literal
+): ParserResult<Sequence> => {
+    const scanner = createParser(kind, interpretComments)
+    return scanner(query, 0)
+}
