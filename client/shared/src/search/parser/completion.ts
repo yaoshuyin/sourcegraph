@@ -211,7 +211,8 @@ export async function getCompletionItems(
     }
     const tokenAtColumn = members.find(({ range }) => range.start + 1 <= column && range.end + 1 >= column)
     if (!tokenAtColumn) {
-        throw new Error('getCompletionItems: no token at column')
+        return null // FIXME later
+        // throw new Error('getCompletionItems: no token at column')
     }
     const token = tokenAtColumn
     // When the token at column is labeled as a pattern or whitespace, and none of filter,

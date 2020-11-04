@@ -372,7 +372,7 @@ const filter: Parser<Filter> = (input, start) => {
     }
 }
 
-const createPattern = (value: string, range: CharacterRange, kind: PatternKind): ParseSuccess<Pattern> => ({
+export const createPattern = (value: string, range: CharacterRange, kind: PatternKind): ParseSuccess<Pattern> => ({
     type: 'success',
     token: {
         type: 'pattern',
@@ -535,7 +535,6 @@ export const parseSearchQuery = (
     interpretComments?: boolean,
     kind = PatternKind.Regexp // FIXME
 ): ParserResult<Sequence> => {
-    console.log(`input ${query}`)
     const scanner = createParser(kind, interpretComments)
-    return scanner(query, 0)
+    return substituteMeta(scanner(query, 0))
 }
