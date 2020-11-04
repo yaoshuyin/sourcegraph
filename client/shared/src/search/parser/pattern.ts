@@ -1,5 +1,5 @@
 import { CharacterRange, ParserResult, Sequence, Token, Pattern, PatternKind } from './parser'
-import { RegExpParser, visitRegExpAST, validateRegExpLiteral, RegExpValidator } from 'regexpp'
+import { RegExpParser, visitRegExpAST, validateRegExpLiteral } from 'regexpp'
 import * as regexNode from 'regexpp/ast'
 
 export interface RegexpMeta {
@@ -14,103 +14,76 @@ export interface StructuralMeta {
     value: string
 }
 
-const createRegexpMeta = (start: number, end: number, value: string): RegexpMeta => ({
-    type: 'regexpmeta',
-    range: {
-        start,
-        end,
-    },
-    value,
-})
-
 const patternToRegexp = (pattern: Pattern): Token[] => {
     const tokens: Token[] = []
-    console.log(`-------------------------- pattern: ${pattern.value} -----------------------------`)
+    console.log(`pattern: ${pattern.value}`)
     try {
-        new RegExpValidator({
-            onLiteralLeave(start: number, end: number) {
-                console.log(`onLiteralLeave ${pattern.value.slice(start, end)} ${start} ${end}`)
-            },
-            onPatternLeave(start: number, end: number) {
-                console.log(`onPatternLeave ${pattern.value.slice(start, end)} ${start} ${end}`)
-            },
-            onDisjunctionLeave(start: number, end: number) {
-                console.log(`onDisjunctionLeave ${pattern.value.slice(start, end)} ${start} ${end}`)
-            },
-            onAlternativeLeave(start: number, end: number, index: number) {
-                console.log(`onAlternativeLeave ${pattern.value.slice(start, end)} ${start} ${end}`)
-            },
-            onGroupLeave(start: number, end: number) {
-                console.log(`onGroupLeave ${pattern.value.slice(start, end)} ${start} ${end}`)
-            },
-            /*
-            onCapturingGroupLeave(start: number, end: number, name: string | null) {
-                console.log(`onCapturingGroupLeave ${pattern.value.slice(start, end)} ${start} ${end}`)
-                const parenStart = end
-                tokens.push(
-                    createRegexpMeta(
-                        pattern.range.start + parenStart,
-                        end + 1,
-                        pattern.value.slice(parenStart, end + 1)
-                    )
-                )
-            },
-            */
-            onCapturingGroupEnter(start: number, name: string | null) {
-                console.log(`onCapturingGroupEnter ${start}`)
-                tokens.push(
-                    createRegexpMeta(
-                        pattern.range.start + start,
-                        pattern.range.start + start + 1,
-                        pattern.value.slice(start, start + 1)
-                    )
-                )
-            },
-            onQuantifier(start: number, end: number, min: number, max: number, greedy: boolean) {
-                console.log(`onQuantifier ${pattern.value.slice(start, end)} ${start} ${end}`)
-                tokens.push(createRegexpMeta(pattern.range.start + start, end, pattern.value.slice(start, end)))
-            },
-            onLookaroundAssertionLeave(start: number, end: number, kind: 'lookahead' | 'lookbehind', negate: boolean) {
-                console.log(`onLookaroundAssertionLeave ${pattern.value.slice(start, end)} ${start} ${end}`)
-            },
-            onEdgeAssertion(start: number, end: number, kind: 'start' | 'end') {
-                console.log(`onEdgeAssertion ${pattern.value.slice(start, end)} ${start} ${end}`)
-            },
-            onWordBoundaryAssertion(start: number, end: number, kind: 'word', negate: boolean) {
-                console.log(`onWordBoundaryAssertion ${pattern.value.slice(start, end)} ${start} ${end}`)
-            },
-            onAnyCharacterSet(start: number, end: number, kind: 'any') {
-                console.log(`onAnyCharacterSet ${pattern.value.slice(start, end)} ${start} ${end}`)
-            },
-            onEscapeCharacterSet(start: number, end: number, kind: 'digit' | 'space' | 'word', negate: boolean) {
-                console.log(`onEscapeCharacterSet ${pattern.value.slice(start, end)} ${start} ${end}`)
-            },
-            onUnicodePropertyCharacterSet(
-                start: number,
-                end: number,
-                kind: 'property',
-                key: string,
-                value: string | null,
-                negate: boolean
-            ) {
-                console.log(`onUnicodePropertyCharacterSet ${pattern.value.slice(start, end)} ${start} ${end}`)
-            },
-            onCharacter(start: number, end: number, value: number) {
-                console.log(`onCharacter ${pattern.value.slice(start, end)} ${start} ${end}`)
-                tokens.push({
-                    type: 'pattern',
-                    range: { start, end },
-                    kind: PatternKind.Regexp,
-                    value: pattern.value.slice(start, end),
-                })
-            },
-            onBackreference(start: number, end: number, reference: number | string) {
-                console.log(`onBackreference ${pattern.value.slice(start, end)} ${start} ${end}`)
-            },
-            onCharacterClassLeave(start: number, end: number, negate: boolean) {
-                console.log(`onCharacterClassLeave ${pattern.value.slice(start, end)} ${start} ${end}`)
-            },
-        }).validatePattern(pattern.value)
+        const ast = new RegExpParser().parsePattern(pattern.value)
+        if (ast) {
+            visitRegExpAST(ast, {
+                onAlternativeEnter(node: regexNode.Alternative) {
+                    console.log(`ALTERNATIVE: ${node.raw}`)
+                },
+                onAssertionEnter(node: regexNode.Assertion) {
+                    console.log(`ASSERTION: ${node.raw}`)
+                },
+                onBackreferenceEnter(node: regexNode.Backreference) {
+                    console.log(`BACK REFERENCE: ${node.raw}`)
+                },
+                onCapturingGroupEnter(node: regexNode.CapturingGroup) {
+                    console.log(`CAPTURING GROUP: ${node.raw} ${node.start} ${node.end}`)
+                    const offset = pattern.range.start
+                    tokens.push({
+                        type: 'regexpmeta',
+                        range: { start: node.start + offset, end: node.end + offset },
+                        value: node.raw,
+                    })
+                },
+                onCharacterEnter(node: regexNode.Character) {
+                    console.log(`CHARACTER: ${node.raw}`)
+                    const offset = pattern.range.start
+                    tokens.push({
+                        type: 'pattern',
+                        range: { start: node.start + offset, end: node.end + offset },
+                        value: node.raw,
+                        kind: PatternKind.Regexp,
+                    })
+                },
+                onCharacterClassRangeEnter(node: regexNode.CharacterClassRange) {
+                    console.log(`CHARACTER CLASS: ${node.raw}`)
+                },
+                onCharacterSetEnter(node: regexNode.CharacterSet) {
+                    console.log(`CHARACTER SET: ${node.raw}`)
+                },
+                onGroupEnter(node: regexNode.Group) {
+                    console.log(`GROUP: ${node.raw} ${node.start} ${node.end}`)
+                },
+                onPatternEnter(node: regexNode.Pattern) {
+                    console.log(`PATTERN: ${node.raw}`)
+                },
+                onRegExpLiteralEnter(node: regexNode.RegExpLiteral) {
+                    console.log(`LITERAL: ${node.raw}`)
+                    tokens.push({
+                        type: 'pattern',
+                        range: { start: node.start, end: node.end },
+                        value: node.raw,
+                        kind: PatternKind.Regexp,
+                    })
+                },
+                onQuantifierEnter(node: regexNode.Quantifier) {
+                    console.log(`QUANTIFIER ${node.raw}`)
+                    console.log(`QUANTIFIER PARENT: ${node.parent.raw}`)
+                    tokens.push({
+                        type: 'regexpmeta',
+                        range: { start: node.start, end: node.end }, // this range is the whole quantified expression
+                        value: node.raw, // good for completion (?)
+                    })
+                },
+                onQuantifierLeave(node: regexNode.Quantifier) {
+                    console.log(`QUANTIFIER LEAVE ${node.raw}`)
+                },
+            })
+        }
     } catch {
         console.log(`fail to parse ${pattern.value}`)
     }
