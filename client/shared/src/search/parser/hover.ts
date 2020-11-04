@@ -10,6 +10,26 @@ export const getHoverResult = (
     { column }: Pick<Monaco.Position, 'column'>
 ): Monaco.languages.Hover | null => {
     const tokenAtColumn = members.find(({ range }) => range.start + 1 <= column && range.end + 1 >= column)
+    if (tokenAtColumn && tokenAtColumn.type === 'regexpmeta') {
+        return {
+            contents: [
+                {
+                    value: 'this is regexp meta',
+                },
+            ],
+            range: toMonacoRange(tokenAtColumn.range),
+        }
+    }
+    if (tokenAtColumn && tokenAtColumn.type === 'structuralmeta') {
+        return {
+            contents: [
+                {
+                    value: 'this is regexp meta',
+                },
+            ],
+            range: toMonacoRange(tokenAtColumn.range),
+        }
+    }
     if (!tokenAtColumn || tokenAtColumn.type !== 'filter') {
         return null
     }

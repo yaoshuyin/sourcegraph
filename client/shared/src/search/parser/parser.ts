@@ -1,5 +1,6 @@
 import { IRange } from 'monaco-editor'
 import { filterTypeKeysWithAliases } from '../interactive/util'
+import { RegexpMeta, StructuralMeta, substituteMeta } from './pattern'
 
 /**
  * Represents a zero-indexed character range in a single-line search query.
@@ -114,7 +115,18 @@ export interface ClosingParen {
     range: CharacterRange
 }
 
-export type Token = Whitespace | OpeningParen | ClosingParen | Operator | Comment | Literal | Pattern | Filter | Quoted
+export type Token =
+    | Whitespace
+    | OpeningParen
+    | ClosingParen
+    | Operator
+    | Comment
+    | Literal
+    | Pattern
+    | Filter
+    | Quoted
+    | RegexpMeta
+    | StructuralMeta
 
 export type Term = Token | Sequence
 
@@ -521,8 +533,9 @@ const createParser = (kind: PatternKind, interpretComments?: boolean): Parser<Se
 export const parseSearchQuery = (
     query: string,
     interpretComments?: boolean,
-    kind = PatternKind.Literal
+    kind = PatternKind.Regexp // FIXME
 ): ParserResult<Sequence> => {
+    console.log(`input ${query}`)
     const scanner = createParser(kind, interpretComments)
     return scanner(query, 0)
 }

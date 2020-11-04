@@ -28,6 +28,31 @@ export function getMonacoTokens(parsedQuery: Pick<Sequence, 'members'>): Monaco.
                     }
                 }
                 break
+            case 'pattern':
+                tokens.push({
+                    startIndex: token.range.start,
+                    scopes: 'pattern',
+                })
+                break
+            case 'openingParen':
+            case 'closingParen':
+                tokens.push({
+                    startIndex: token.range.start,
+                    scopes: 'paren',
+                })
+                break
+            case 'regexpmeta':
+                tokens.push({
+                    startIndex: token.range.start,
+                    scopes: 'regexpmeta',
+                })
+                break
+            case 'structuralmeta':
+                tokens.push({
+                    startIndex: token.range.start,
+                    scopes: 'structuralmeta',
+                })
+                break
             case 'operator':
                 tokens.push({
                     startIndex: token.range.start,
