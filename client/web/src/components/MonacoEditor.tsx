@@ -38,7 +38,10 @@ monaco.editor.defineTheme(SOURCEGRAPH_DARK, {
         { token: 'comment', foreground: '#ffa94d' },
         { token: 'pattern', foreground: '#f2f4f8' },
         { token: 'paren', foreground: '#da77f2' },
-        { token: 'regexpmeta', foreground: '#ff6666' },
+        { token: 'regexpMetaGeneric', foreground: '#3bc9db' },
+        { token: 'regexpMetaCharacterClass', foreground: '#ff6666' },
+        { token: 'regexpMetaDelimited', foreground: '#ff6666' },
+        { token: 'structuralMetaGeneric', foreground: '#ff6666' },
     ],
 })
 

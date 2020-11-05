@@ -10,21 +10,30 @@ export const getHoverResult = (
     { column }: Pick<Monaco.Position, 'column'>
 ): Monaco.languages.Hover | null => {
     const tokenAtColumn = members.find(({ range }) => range.start + 1 <= column && range.end >= column)
-    if (tokenAtColumn && tokenAtColumn.type === 'regexpmeta') {
-        return {
-            contents: [
-                {
-                    value: 'this is regexp meta',
-                },
-            ],
-            range: toMonacoRange(tokenAtColumn.range),
+    if (tokenAtColumn) {
+        let value: string | undefined
+        if (tokenAtColumn.type === 'regexpMetaGeneric') {
+            value = tokenAtColumn.hover
+        }
+        if (tokenAtColumn.type === 'regexpMetaCharacterClass') {
+            value = tokenAtColumn.hover
+        }
+        if (value !== undefined) {
+            return {
+                contents: [
+                    {
+                        value,
+                    },
+                ],
+                range: toMonacoRange(tokenAtColumn.range),
+            }
         }
     }
-    if (tokenAtColumn && tokenAtColumn.type === 'structuralmeta') {
+    if (tokenAtColumn && tokenAtColumn.type === 'structuralMetaGeneric') {
         return {
             contents: [
                 {
-                    value: 'this is regexp meta',
+                    value: tokenAtColumn.hover,
                 },
             ],
             range: toMonacoRange(tokenAtColumn.range),

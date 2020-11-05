@@ -41,16 +41,18 @@ export function getMonacoTokens(parsedQuery: Pick<Sequence, 'members'>): Monaco.
                     scopes: 'paren',
                 })
                 break
-            case 'regexpmeta':
+            case 'regexpMetaGeneric':
+            case 'regexpMetaCharacterClass':
+            case 'regexpMetaDelimited':
                 tokens.push({
                     startIndex: token.range.start,
-                    scopes: 'regexpmeta',
+                    scopes: token.type,
                 })
                 break
-            case 'structuralmeta':
+            case 'structuralMetaGeneric':
                 tokens.push({
                     startIndex: token.range.start,
-                    scopes: 'structuralmeta',
+                    scopes: token.type,
                 })
                 break
             case 'operator':

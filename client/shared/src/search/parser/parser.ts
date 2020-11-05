@@ -533,7 +533,7 @@ const createParser = (kind: PatternKind, interpretComments?: boolean): Parser<Se
 export const parseSearchQuery = (
     query: string,
     interpretComments?: boolean,
-    kind = PatternKind.Regexp // FIXME
+    kind = /* PatternKind.Structural*/ PatternKind.Regexp // FIXME
 ): ParserResult<Sequence> => {
     const scanner = createParser(kind, interpretComments)
     return substituteMeta(scanner(query, 0))
