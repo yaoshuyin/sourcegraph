@@ -531,3 +531,204 @@ export const parseSearchQuery = (
     const scanner = createParser(kind, interpretComments)
     return scanner(query, 0)
 }
+
+/** *************************************************************** */
+
+// Maybe store tokens associated with it.
+// Maybe add annotation for ranges.
+// FIXME negated
+export interface TreePattern {
+    type: 'pattern'
+    kind: PatternKind
+    value: string
+    quoted: boolean
+}
+
+export interface TreeParameter {
+    type: 'parameter'
+    field: string
+    value: string
+    negated: boolean
+}
+
+enum OperatorKind {
+    Or = 'or',
+    And = 'and',
+}
+
+/**
+ * A nonterminal node for operators 'and' and 'or'.
+ */
+export interface TreeOperator {
+    type: 'operator'
+    operands: Node[]
+    kind: OperatorKind
+}
+
+export type Node = TreeOperator | TreeParameter | TreePattern
+
+interface TreeParseError {
+    type: 'error'
+    expected: string
+}
+
+export interface TreeParseSuccess {
+    type: 'success'
+    nodes: Node[]
+}
+
+export type TreeParseResult = TreeParseError | TreeParseSuccess
+
+interface State {
+    result: TreeParseResult
+    tokens: Token[]
+}
+
+const createNodes = (nodes: Node[]): TreeParseResult => ({
+    type: 'success',
+    nodes,
+})
+
+const createTreePattern = (value: string, kind: PatternKind, quoted: boolean): TreeParseResult =>
+    createNodes([
+        {
+            type: 'pattern',
+            kind,
+            value,
+            quoted,
+        },
+    ])
+
+const createTreeParameter = (field: string, value: string, negated: boolean): TreeParseResult =>
+    createNodes([
+        {
+            type: 'parameter',
+            field,
+            value,
+            negated,
+        },
+    ])
+
+const createOperator = (nodes: Node[], kind: OperatorKind): TreeParseResult => ({
+    type: 'success',
+    nodes: [
+        {
+            type: 'operator',
+            operands: nodes,
+            kind,
+        },
+    ],
+})
+
+// attach a list of tokens to the tree node maybe?
+const tokenToTreeNode = (token: Token): TreeParseResult => {
+    if (token.type === 'pattern') {
+        return createTreePattern(token.value, token.kind, false)
+    }
+    if (token.type === 'filter') {
+        // TODO: negated params in scanner
+        const filterValue = token.filterValue
+            ? token.filterValue.type === 'literal'
+                ? token.filterValue.value
+                : token.filterValue.quotedValue
+            : ''
+        return createTreeParameter(token.filterType.value, filterValue, false)
+    }
+    return { type: 'error', expected: 'a convertable token to tree node' }
+}
+
+export const parseLeaves = (tokens: Token[]): State => {
+    const nodes: Node[] = []
+    while (true) {
+        const current = tokens[0]
+        if (current === undefined) {
+            break
+        }
+        if (current.type === 'openingParen') {
+            tokens = tokens.slice(1) // consume
+
+            const groupNodes = parseOr(tokens)
+            if (groupNodes.result.type === 'error') {
+                return { result: groupNodes.result, tokens }
+            }
+            nodes.push(...groupNodes.result.nodes)
+            tokens = groupNodes.tokens // advance
+            continue // unlike the go code, no break
+        }
+        if (current.type === 'closingParen') {
+            tokens = tokens.slice(1) // consume
+
+            if (nodes.length === 0) {
+                // we parsed ()
+            }
+            break // parse afresh
+        }
+        if (
+            current.type === 'operator' &&
+            (current.value.toLowerCase() === 'or' || current.value.toLowerCase() === 'and')
+        ) {
+            return { result: createNodes(nodes), tokens } // Caller advances.
+        }
+        // TODO: Handle not token / negated pattern
+        const node = tokenToTreeNode(current)
+        if (node.type === 'error') {
+            return { result: node, tokens }
+        }
+        nodes.push(node.nodes[0])
+        tokens = tokens.slice(1)
+    }
+    return {
+        result: {
+            type: 'success',
+            nodes,
+        },
+        tokens,
+    }
+}
+
+export const parseAnd = (tokens: Token[]): State => {
+    const left = parseLeaves(tokens)
+    if (left.result.type === 'error') {
+        return { result: left.result, tokens }
+    }
+    if (left.tokens[0] === undefined) {
+        return { result: left.result, tokens } // done
+    }
+    if (!(left.tokens[0].type === 'operator' && left.tokens[0].value.toLowerCase() === 'and')) {
+        return { result: left.result, tokens: left.tokens }
+    }
+    tokens = left.tokens.slice(1) // consume 'and'.
+    const right = parseAnd(tokens)
+    if (right.result.type === 'error') {
+        return { result: right.result, tokens }
+    }
+    return {
+        result: createOperator(left.result.nodes.concat(...right.result.nodes), OperatorKind.And),
+        tokens: right.tokens,
+    }
+}
+
+export const parseOr = (tokens: Token[]): State => {
+    const left = parseAnd(tokens)
+    if (left.result.type === 'error') {
+        return { result: left.result, tokens }
+    }
+    if (left.tokens[0] === undefined) {
+        return { result: left.result, tokens } // done
+    }
+    if (!(left.tokens[0].type === 'operator' && left.tokens[0].value.toLowerCase() === 'or')) {
+        return { result: left.result, tokens: left.tokens }
+    }
+    tokens = left.tokens.slice(1) // consume 'or'.
+    const right = parseOr(tokens)
+    if (right.result.type === 'error') {
+        return { result: right.result, tokens }
+    }
+    return {
+        result: createOperator(left.result.nodes.concat(...right.result.nodes), OperatorKind.Or),
+        tokens: right.tokens,
+    }
+}
+
+export const treeParse = (tokens: Token[]): TreeParseResult =>
+    parseOr(tokens.filter(token => token.type !== 'whitespace')).result

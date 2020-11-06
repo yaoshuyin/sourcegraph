@@ -1,4 +1,13 @@
-import { parseSearchQuery, scanBalancedPattern, PatternKind } from './parser'
+import {
+    parseSearchQuery,
+    scanBalancedPattern,
+    PatternKind,
+    treeParse,
+    Node,
+    Token,
+    ParserResult,
+    Sequence,
+} from './parser'
 
 expect.addSnapshotSerializer({
     serialize: value => JSON.stringify(value),
@@ -197,4 +206,42 @@ thing`
             '{"type":"success","token":{"type":"sequence","members":[{"type":"pattern","range":{"start":0,"end":2},"kind":1,"value":"//"},{"type":"whitespace","range":{"start":2,"end":3}},{"type":"pattern","range":{"start":3,"end":8},"kind":1,"value":"thing"}],"range":{"start":0,"end":8}}}'
         )
     })
+})
+
+export const prettyPrint = (nodes: Node[]): string => nodes.map(toString).join(' ')
+
+export const treeParseSuccess = (input: string): Node[] => {
+    const tokens = parseSearchQuery(input)
+    if (tokens.type === 'error') {
+        return []
+    }
+    const result = treeParse(tokens.token.members)
+    if (result.type === 'success') {
+        return result.nodes
+    }
+    return []
+}
+
+describe('treeParse', () => {
+    test('basic', () =>
+        expect(treeParseSuccess('repo:foo a b c')).toMatchInlineSnapshot(
+            '[{"type":"parameter","field":"repo","value":"foo","negated":false},{"type":"pattern","kind":1,"value":"a","quoted":false},{"type":"pattern","kind":1,"value":"b","quoted":false},{"type":"pattern","kind":1,"value":"c","quoted":false}]'
+        ))
+
+    test('basic', () =>
+        expect(treeParseSuccess('a b and c')).toMatchInlineSnapshot(
+            '[{"type":"operator","operands":[{"type":"pattern","kind":1,"value":"a","quoted":false},{"type":"pattern","kind":1,"value":"b","quoted":false},{"type":"pattern","kind":1,"value":"c","quoted":false}],"kind":"and"}]'
+        ))
+
+    test('basic', () =>
+        expect(treeParseSuccess('a or b')).toMatchInlineSnapshot(
+            '[{"type":"operator","operands":[{"type":"pattern","kind":1,"value":"a","quoted":false},{"type":"pattern","kind":1,"value":"b","quoted":false}],"kind":"or"}]'
+        ))
+
+    test('basic', () =>
+        expect(treeParseSuccess('a or b and c')).toMatchInlineSnapshot(
+            '[{"type":"operator","operands":[{"type":"pattern","kind":1,"value":"a","quoted":false},{"type":"operator","operands":[{"type":"pattern","kind":1,"value":"b","quoted":false},{"type":"pattern","kind":1,"value":"c","quoted":false}],"kind":"and"}],"kind":"or"}]'
+        ))
+
+    test('basic', () => expect(treeParseSuccess('a and (b or c)')).toMatchInlineSnapshot(''))
 })
