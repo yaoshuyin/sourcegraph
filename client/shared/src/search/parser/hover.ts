@@ -9,7 +9,36 @@ export const getHoverResult = (
     { members }: Pick<Sequence, 'members'>,
     { column }: Pick<Monaco.Position, 'column'>
 ): Monaco.languages.Hover | null => {
-    const tokenAtColumn = members.find(({ range }) => range.start + 1 <= column && range.end + 1 >= column)
+    const tokenAtColumn = members.find(({ range }) => range.start + 1 <= column && range.end >= column)
+    if (tokenAtColumn) {
+        let value: string | undefined
+        if (tokenAtColumn.type === 'regexpMetaGeneric') {
+            value = tokenAtColumn.hover
+        }
+        if (tokenAtColumn.type === 'regexpMetaCharacterClass') {
+            value = tokenAtColumn.hover
+        }
+        if (value !== undefined) {
+            return {
+                contents: [
+                    {
+                        value,
+                    },
+                ],
+                range: toMonacoRange(tokenAtColumn.range),
+            }
+        }
+    }
+    if (tokenAtColumn && tokenAtColumn.type === 'structuralMetaGeneric') {
+        return {
+            contents: [
+                {
+                    value: tokenAtColumn.hover,
+                },
+            ],
+            range: toMonacoRange(tokenAtColumn.range),
+        }
+    }
     if (!tokenAtColumn || tokenAtColumn.type !== 'filter') {
         return null
     }

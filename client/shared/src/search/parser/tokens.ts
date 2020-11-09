@@ -28,6 +28,33 @@ export function getMonacoTokens(parsedQuery: Pick<Sequence, 'members'>): Monaco.
                     }
                 }
                 break
+            case 'pattern':
+                tokens.push({
+                    startIndex: token.range.start,
+                    scopes: 'pattern',
+                })
+                break
+            case 'openingParen':
+            case 'closingParen':
+                tokens.push({
+                    startIndex: token.range.start,
+                    scopes: 'paren',
+                })
+                break
+            case 'regexpMetaGeneric':
+            case 'regexpMetaCharacterClass':
+            case 'regexpMetaDelimited':
+                tokens.push({
+                    startIndex: token.range.start,
+                    scopes: token.type,
+                })
+                break
+            case 'structuralMetaGeneric':
+                tokens.push({
+                    startIndex: token.range.start,
+                    scopes: token.type,
+                })
+                break
             case 'operator':
                 tokens.push({
                     startIndex: token.range.start,
