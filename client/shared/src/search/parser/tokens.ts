@@ -1,5 +1,5 @@
 import * as Monaco from 'monaco-editor'
-import { Token, Pattern, CharacterRange, PatternKind } from './scanner'
+import { Token, Pattern, Literal, CharacterRange, PatternKind } from './scanner'
 import { RegExpParser, visitRegExpAST } from 'regexpp'
 import {
     Character,
@@ -37,9 +37,67 @@ export interface StructuralMeta {
     value: string
 }
 
-export type MetaToken = RegexpMeta | StructuralMeta
+export enum PathMetaKind {
+    Separator = 'Separator',
+}
+
+/**
+ * Tokens that are meaningful in path patterns, like
+ * path separators / or wildcards *.
+ */
+export interface PathMeta {
+    type: 'pathMeta'
+    range: CharacterRange
+    kind: PathMetaKind
+    value: string
+}
+
+export type MetaToken = PathMeta | RegexpMeta | StructuralMeta
 
 type DecoratedToken = Token | MetaToken
+
+const mapLiteralToPattern = (tokens: DecoratedToken[], kind: PatternKind): DecoratedToken[] =>
+    tokens.map(token =>
+        token.type === 'literal' ? { type: 'pattern', kind, range: token.range, value: token.value } : token
+    )
+
+// Tokenize a literal value like "^foo/bar/baz$" by a path separator '/'.
+const mapPathMeta = (literal: Literal): DecoratedToken[] => {
+    const tokens: DecoratedToken[] = []
+    const offset = literal.range.start
+    let start = 0
+    let current = 0
+    while (literal.value[current]) {
+        if (literal.value[current] === '\\') {
+            current = current + 2 // Continue past escaped value.
+            continue
+        } else if (literal.value[current] === '/') {
+            tokens.push({
+                type: 'literal',
+                range: { start: offset + start, end: offset + current - 1 },
+                value: literal.value.slice(start, current),
+            })
+            tokens.push({
+                type: 'pathMeta',
+                range: { start: offset + current, end: offset + current + 1 },
+                kind: PathMetaKind.Separator,
+                value: '/',
+            })
+            current = current + 1
+            start = current
+            continue
+        }
+        current = current + 1
+    }
+    // Push last token.
+    tokens.push({
+        type: 'literal',
+        range: { start: offset + start, end: offset + current },
+        value: literal.value.slice(start, current),
+    })
+    console.log(`result: ${JSON.stringify(tokens)}`)
+    return tokens
+}
 
 const mapRegexpMeta = (pattern: Pattern): DecoratedToken[] => {
     const tokens: DecoratedToken[] = []
@@ -177,7 +235,46 @@ export const hasRegexpValue = (field: string): boolean => {
     }
 }
 
+/**
+ * Returns true for filter values that have path-like values, e.g., repo, file.
+ * Excludes FilterType.content because that depends on the pattern kind.
+ */
+export const hasPathLikeValue = (field: string): boolean => {
+    const fieldName = field.startsWith('-') ? field.slice(1) : field
+    switch (fieldName.toLocaleLowerCase()) {
+        case 'repo':
+        case 'r':
+        case 'file':
+        case 'f':
+        case 'repohasfile':
+            return true
+        default:
+            return false
+    }
+}
+
 const decorateTokens = (tokens: Token[]): DecoratedToken[] => {
+    const decorated: DecoratedToken[] = []
+    for (const token of tokens) {
+        if (token.type === 'pattern') {
+            switch (token.kind) {
+                case PatternKind.Regexp:
+                    decorated.push(...mapRegexpMeta(token))
+                    break
+                case PatternKind.Structural:
+                    decorated.push(...mapStructuralMeta(token))
+                    break
+                default:
+                    decorated.push(token)
+            }
+            continue
+        }
+        decorated.push(token)
+    }
+    return decorated
+}
+
+const sighDecorateTokens = (tokens: DecoratedToken[]): DecoratedToken[] => {
     const decorated: DecoratedToken[] = []
     for (const token of tokens) {
         if (token.type === 'pattern') {
@@ -214,16 +311,16 @@ const fromDecoratedTokens = (tokens: DecoratedToken[]): Monaco.languages.IToken[
                         token.filterValue &&
                         token.filterValue.type === 'literal'
                     ) {
-                        // Highlight fields with regexp values.
-                        const decoratedValue = decorateTokens([
-                            {
-                                type: 'pattern',
-                                kind: PatternKind.Regexp,
-                                value: token.filterValue.value,
-                                range: token.filterValue.range,
-                            },
-                        ])
-                        monacoTokens.push(...fromDecoratedTokens(decoratedValue))
+                        const decoratedPathTokens = sighDecorateTokens(
+                            // FIXME
+                            mapLiteralToPattern(
+                                hasPathLikeValue(token.filterType.value)
+                                    ? mapPathMeta(token.filterValue)
+                                    : [token.filterValue],
+                                PatternKind.Regexp
+                            )
+                        )
+                        monacoTokens.push(...fromDecoratedTokens(decoratedPathTokens))
                     } else if (token.filterValue) {
                         monacoTokens.push({
                             startIndex: token.filterValue.range.start,
@@ -242,6 +339,7 @@ const fromDecoratedTokens = (tokens: DecoratedToken[]): Monaco.languages.IToken[
                     scopes: token.type,
                 })
                 break
+            case 'pathMeta':
             case 'regexpMeta':
             case 'structuralMeta':
                 /** The scopes value is derived from the token type and its kind.
