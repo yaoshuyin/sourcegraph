@@ -118,6 +118,11 @@ export const Toggles: React.FunctionComponent<TogglesProps> = (props: TogglesPro
         .filter(queryPart => !!queryPart)
         .join(' ')
 
+    const disableToggle = {
+        condition: true,
+        reason: 'The query contains multiple fields that affect XXcasingXX and cannot be toggled.',
+    }
+
     return (
         <div className={classNames('toggle-container', className)}>
             {copyQueryButton && (
@@ -135,6 +140,7 @@ export const Toggles: React.FunctionComponent<TogglesProps> = (props: TogglesPro
                 className="test-case-sensitivity-toggle"
                 activeClassName="test-case-sensitivity-toggle--active"
                 disabledRules={[
+                    disableToggle,
                     {
                         condition: patternType === SearchPatternType.structural,
                         reason: 'Structural search is always case sensitive',
@@ -149,6 +155,7 @@ export const Toggles: React.FunctionComponent<TogglesProps> = (props: TogglesPro
                 icon={RegexIcon}
                 className="test-regexp-toggle"
                 activeClassName="test-regexp-toggle--active"
+                disabledRules={[disableToggle]}
             />
             {!structuralSearchDisabled && (
                 <QueryInputToggle
@@ -159,6 +166,7 @@ export const Toggles: React.FunctionComponent<TogglesProps> = (props: TogglesPro
                     isActive={patternType === SearchPatternType.structural}
                     onToggle={toggleStructuralSearch}
                     icon={CodeBracketsIcon}
+                    disabledRules={[disableToggle]}
                 />
             )}
         </div>
