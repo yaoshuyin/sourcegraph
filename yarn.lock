@@ -23363,10 +23363,10 @@ worker-loader@^2.0.0:
     loader-utils "^1.0.0"
     schema-utils "^0.4.0"
 
-worker-loader@^3.0.4:
-  version "3.0.4"
-  resolved "https://registry.npmjs.org/worker-loader/-/worker-loader-3.0.4.tgz#bbc0af0af7e2d972c1105001ab215497c00b98ca"
-  integrity sha512-puFIebctLf/xB5Vex9QTX4Zr+wR6hQZqgVEg7QeUTA0I8XzTmGr620ryvY8E448C/hJ+eE+NKiIX9xyFcQNFbQ==
+worker-loader@^3.0.6:
+  version "3.0.6"
+  resolved "https://registry.npmjs.org/worker-loader/-/worker-loader-3.0.6.tgz#fa540eaa806422b744ddcd64db7eced7ae32a6ff"
+  integrity sha512-yLmxR1momXc8R8NM4j4/nq7hPvVTems7i40NuAdVmitLJwq4agIeZRTyW2Hans0J21laF0e6/ypYbwLpBzlifA==
   dependencies:
     loader-utils "^2.0.0"
     schema-utils "^3.0.0"
