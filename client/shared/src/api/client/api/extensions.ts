@@ -1,6 +1,9 @@
 import { Remote } from 'comlink'
 import { from, Subscription } from 'rxjs'
 import { bufferCount, startWith } from 'rxjs/operators'
+import { splitExtensionID } from '../../../extensions/extension'
+import { PlatformContext } from '../../../platform/context'
+import { hashCode } from '../../../util/hashCode'
 import { ExtensionExtensionsAPI } from '../../extension/api/extensions'
 import { ExecutableExtension, IExtensionsService } from '../services/extensionsService'
 
@@ -11,11 +14,16 @@ export class ClientExtensions {
     /**
      * Implements the client side of the extensions API.
      *
-     * @param connection The connection to the extension host.
+     * @param proxy The connection to the extension host.
      * @param extensions An observable that emits the set of extensions that should be activated
      * upon subscription and whenever it changes.
+     * @param platformContext The platform context
      */
-    constructor(private proxy: Remote<ExtensionExtensionsAPI>, extensionRegistry: IExtensionsService) {
+    constructor(
+        private proxy: Remote<ExtensionExtensionsAPI>,
+        extensionRegistry: IExtensionsService,
+        private platformContext: Pick<PlatformContext, 'telemetryService'>
+    ) {
         this.subscriptions.add(
             from(extensionRegistry.activeExtensions)
                 .pipe(startWith([] as ExecutableExtension[]), bufferCount(2, 1))
@@ -55,6 +63,23 @@ export class ClientExtensions {
                     // Activate extensions that haven't yet been activated.
                     for (const extension of toActivate) {
                         console.log('Activating Sourcegraph extension:', extension.id)
+                        // We could log the event after the activation promise resolves to ensure that there wasn't
+                        // an error during activation, but we want to track the maximum number of times an extension could have been useful.
+                        // Since extension activation is passive from the user's perspective, and we don't yet track extension usage events,
+                        // there's no way that we could measure how often extensions are actually useful anyways.
+
+                        // Hash extension IDs that specify host, since that means that it's a private registry extension.
+                        // TODO(tj): Is it ok to compare publisher + name of private extensions to see if it's a copy of
+                        // a public extension?
+
+                        const telemetryExtensionID = splitExtensionID(extension.id).host
+                            ? hashCode(extension.id, 20)
+                            : extension.id
+
+                        this.platformContext.telemetryService?.log('ExtensionActivation', {
+                            extension_id: telemetryExtensionID,
+                        })
+
                         this.proxy.$activateExtension(extension.id, extension.scriptURL).catch(error => {
                             console.error(`Error activating extension ${JSON.stringify(extension.id)}:`, error)
                         })

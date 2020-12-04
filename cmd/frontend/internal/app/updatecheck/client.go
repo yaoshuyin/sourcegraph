@@ -211,6 +211,8 @@ func getAndMarshalAggregatedSearchUsageJSON(ctx context.Context) (_ json.RawMess
 	return json.Marshal(searchUsage)
 }
 
+// TODO(tj|ping): getAndMarshal
+
 func getDependencyVersions(ctx context.Context, logFunc func(string, ...interface{})) (json.RawMessage, error) {
 	var (
 		err error
@@ -293,6 +295,7 @@ func updateBody(ctx context.Context) (io.Reader, error) {
 		Repositories:        []byte("{}"),
 		RetentionStatistics: []byte("{}"),
 		SearchOnboarding:    []byte("{}"),
+		// TODO(tj|ping)
 	}
 
 	totalUsers, err := getTotalUsersCount(ctx)
@@ -368,6 +371,8 @@ func updateBody(ctx context.Context) (io.Reader, error) {
 		if err != nil {
 			logFunc("telemetry: updatecheck.getAndMarshalRetentionStatisticsJSON failed", "error", err)
 		}
+
+		// TODO(tj|ping)
 
 		r.ExternalServices, err = externalServiceKinds(ctx)
 		if err != nil {
