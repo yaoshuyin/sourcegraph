@@ -137,7 +137,8 @@ func (c *Client) waitForReposByQuery(name, query string, repos ...string) ([]str
 // ExternalLink is a link to an external service.
 type ExternalLink struct {
 	URL         string `json:"url"`         // The URL to the resource
-	ServiceType string `json:"serviceType"` // The type of service that the URL points to
+	ServiceType string `json:"serviceType"` // The kind of service that the URL points to
+	ServiceKind string `json:"serviceKind"`
 }
 
 // FileExternalLinks external links for a file or directory in a repository.
