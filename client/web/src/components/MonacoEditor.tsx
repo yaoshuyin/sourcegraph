@@ -38,6 +38,7 @@ monaco.editor.defineTheme(SOURCEGRAPH_DARK, {
         { token: 'openingParen', foreground: '#da77f2' },
         { token: 'closingParen', foreground: '#da77f2' },
         { token: 'comment', foreground: '#ffa94d' },
+        { token: 'metaSeparator', foreground: '#569cd9' },
         // Regexp pattern highlighting
         { token: 'metaRegexpDelimited', foreground: '#ff6b6b' },
         { token: 'metaRegexpAssertion', foreground: '#ff6b6b' },
@@ -49,6 +50,9 @@ monaco.editor.defineTheme(SOURCEGRAPH_DARK, {
         { token: 'metaRegexpAlternative', foreground: '#3bc9db' },
         // Structural pattern highlighting
         { token: 'metaStructuralHole', foreground: '#ff6b6b' },
+        // Revision highlighting
+        { token: 'metaRevisionSeparator', foreground: '3bc9db' },
+        { token: 'metaRevisionCommitHash', foreground: 'da77f2' },
     ],
 })
 
