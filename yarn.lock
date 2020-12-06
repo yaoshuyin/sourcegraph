@@ -17030,12 +17030,17 @@ p-retry@^4.0.0, p-retry@^4.2.0:
     "@types/retry" "^0.12.0"
     retry "^0.12.0"
 
-p-timeout@^3.1.0, p-timeout@^3.2.0:
+p-timeout@^3.1.0:
   version "3.2.0"
   resolved "https://registry.npmjs.org/p-timeout/-/p-timeout-3.2.0.tgz#c7e17abc971d2a7962ef83626b35d635acf23dfe"
   integrity sha512-rhIwUycgwwKcP9yTOOFK/AKsAopjjCakVqLHePO3CC6Mir1Z99xT+R63jZxAT5lFZLa2inS5h+ZS2GvR99/FBg==
   dependencies:
     p-finally "^1.0.0"
+
+p-timeout@^4.0.1:
+  version "4.0.1"
+  resolved "https://registry.npmjs.org/p-timeout/-/p-timeout-4.0.1.tgz#a4c1d33f50fcae3a302e9a37c980ad360f3163ab"
+  integrity sha512-7GfpWa9RVtx27xhLJiICP4qwAk4MlY1/Q7AEfE1jWzoWQtowKzpm5Roo6ConYGxatwm7hJmT6EmInipN5RpG5Q==
 
 p-try@^1.0.0:
   version "1.0.0"
