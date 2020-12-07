@@ -236,7 +236,17 @@ func (s *Syncer) SyncExternalService(ctx context.Context, tx Store, externalServ
 	// Fetch repos from the source
 	var sourced Repos
 	if sourced, err = s.sourced(ctx, svcs, onSourced); err != nil {
-		return errors.Wrap(err, "syncer.sync.sourced")
+		var badCredentials bool
+		// As a special case, if we fail due to bad credentials we should behave as if zero repos were found. This is
+		// so that revoked tokens cause repos to be removed correctly.
+		var se *SourceError
+		if errors.As(err, &se) {
+			badCredentials = se.IsBadCredentials()
+		}
+		if !badCredentials {
+			return errors.Wrap(err, "syncer.sync.sourced")
+		}
+		log15.Warn("Bad credentials while syncing", "externalService", svc.ID)
 	}
 
 	// Unless explicitly specified with the "all" setting or the owner of the service has the "AllowUserExternalServicePrivate" tag,
@@ -246,7 +256,6 @@ func (s *Syncer) SyncExternalService(ctx context.Context, tx Store, externalServ
 		if err != nil {
 			return errors.Wrap(err, "checking user tag")
 		}
-
 		if !ok {
 			sourced = sourced.Filter(func(r *Repo) bool { return !r.Private })
 		}

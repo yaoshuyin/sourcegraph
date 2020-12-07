@@ -184,6 +184,23 @@ func (s *SourceError) Error() string {
 	return s.Err.Error()
 }
 
+// IsBadCredentials returns true if the error was caused by bad credentials.
+func (s *SourceError) IsBadCredentials() bool {
+	if s == nil || s.ExtSvc == nil || s.Err == nil {
+		return false
+	}
+
+	switch strings.ToUpper(s.ExtSvc.Kind) {
+	case extsvc.KindGitHub:
+		return strings.Contains(s.Err.Error(), "401: Bad credentials")
+	case extsvc.KindGitLab:
+		return strings.Contains(s.Err.Error(), "HTTP error status 401")
+	default:
+		// TODO: Implement for other source types
+		return false
+	}
+}
+
 func sourceErrorFormatFunc(es []error) string {
 	if len(es) == 1 {
 		return es[0].Error()
