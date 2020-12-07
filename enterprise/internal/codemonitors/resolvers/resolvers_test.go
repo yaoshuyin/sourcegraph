@@ -757,3 +757,64 @@ query ($id: ID!) {
 }
 
 `
+
+func TestMonitorPaging(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	ctx := backend.WithAuthzBypass(context.Background())
+	dbtesting.SetupGlobalTestDB(t)
+	r := newTestResolver(t)
+
+	user1Name := "cm-user1"
+	user1ID := insertTestUser(t, dbconn.Global, user1Name, true)
+
+	// Create 2 code monitors.
+	ctx = actor.WithActor(ctx, actor.FromUser(user1ID))
+	for i := 0; i < 2; i++ {
+		_, err := r.insertTestMonitorWithOpts(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	queryInput := map[string]interface{}{
+		"userName":      user1Name,
+		"monitorCursor": string(relay.MarshalID(MonitorKind, 1)),
+	}
+	schema, err := graphqlbackend.NewSchema(nil, nil, nil, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := apitest.Response{}
+	campaignApitest.MustExec(ctx, t, schema, queryInput, &got, queryMonitorsForPaging)
+
+	want := apitest.Response{
+		User: apitest.User{
+			Monitors: apitest.MonitorConnection{
+				TotalCount: 2,
+				Nodes: []apitest.Monitor{{
+					Id: string(relay.MarshalID(MonitorKind, 2)),
+				}},
+			},
+		},
+	}
+
+	if diff := cmp.Diff(&got, &want); diff != "" {
+		t.Fatalf("diff: %s", diff)
+	}
+}
+
+const queryMonitorsForPaging = `
+query($userName: String!, $monitorCursor: String!){
+	user(username:$userName){
+		monitors(first:1, after:$monitorCursor){
+			totalCount
+			nodes{
+				id
+			}
+		}
+	}
+}
+`
