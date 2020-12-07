@@ -4082,13 +4082,21 @@
   resolved "https://registry.npmjs.org/@types/socket.io-client/-/socket.io-client-1.4.33.tgz#8e705b9b3f7fba6cb329d27cd2eda222812adbf1"
   integrity sha512-m4LnxkljsI9fMsjwpW5QhRpMixo2BeeLpFmg0AE+sS4H1pzAd/cs/ftTiL60FLZgfFa8PFRPx5KsHu8O0bADKQ==
 
-"@types/socket.io@2.1.10":
-  version "2.1.10"
-  resolved "https://registry.npmjs.org/@types/socket.io/-/socket.io-2.1.10.tgz#cb00583313cc40a65d5201e897d7b8c95cfd8c73"
-  integrity sha512-1fQMaDU/x2LPljEI/QI5IKl8sBYHM/zv32YYKvNrVEor7/1+MLqMqmWt8Bb8Vpf+PlIPBiTTC0BnrRx7ju3xOw==
+"@types/socket.io-parser@*":
+  version "2.2.1"
+  resolved "https://registry.npmjs.org/@types/socket.io-parser/-/socket.io-parser-2.2.1.tgz#dc94aed303839487f4975249a32a548109ea3647"
+  integrity sha512-+JNb+7N7tSINyXPxAJb62+NcpC1x/fPn7z818W4xeNCdPTp6VsO/X8fCsg6+ug4a56m1v9sEiTIIUKVupcHOFQ==
+  dependencies:
+    "@types/node" "*"
+
+"@types/socket.io@2.1.12":
+  version "2.1.12"
+  resolved "https://registry.npmjs.org/@types/socket.io/-/socket.io-2.1.12.tgz#91187f826a5dd2ed1113e935815bbaf9627e5cb0"
+  integrity sha512-oStc5VFkpb0AsjOxQUj9ztX5Iziatyla/rjZTYbFGoVrrKwd+JU2mtxk7iSl5RGYx9WunLo6UXW1fBzQok/ZyA==
   dependencies:
     "@types/engine.io" "*"
     "@types/node" "*"
+    "@types/socket.io-parser" "*"
 
 "@types/source-list-map@*":
   version "0.1.2"
