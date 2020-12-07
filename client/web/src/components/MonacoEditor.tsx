@@ -32,13 +32,16 @@ monaco.editor.defineTheme(SOURCEGRAPH_DARK, {
         'editor.hoverHighlightBackground': '#495057',
     },
     rules: [
+        // Sourcegraph language
         { token: 'identifier', foreground: '#f2f4f8' },
         { token: 'field', foreground: '#569cd6' },
         { token: 'keyword', foreground: '#da77f2' },
         { token: 'openingParen', foreground: '#da77f2' },
         { token: 'closingParen', foreground: '#da77f2' },
         { token: 'comment', foreground: '#ffa94d' },
-        { token: 'metaSeparator', foreground: '#569cd9' },
+        // Sourcegraph meta language
+        { token: 'metaRepoRevisionSeparator', foreground: '#569cd9' },
+        { token: 'metaPathSeparator', foreground: '#868e96' },
         // Regexp pattern highlighting
         { token: 'metaRegexpDelimited', foreground: '#ff6b6b' },
         { token: 'metaRegexpAssertion', foreground: '#ff6b6b' },
@@ -51,8 +54,12 @@ monaco.editor.defineTheme(SOURCEGRAPH_DARK, {
         // Structural pattern highlighting
         { token: 'metaStructuralHole', foreground: '#ff6b6b' },
         // Revision highlighting
-        { token: 'metaRevisionSeparator', foreground: '3bc9db' },
-        { token: 'metaRevisionCommitHash', foreground: 'da77f2' },
+        { token: 'metaRevisionLabel', foreground: '#f2f4f8' },
+        { token: 'metaRevisionPathLike', foreground: '#f2f4f8' },
+        { token: 'metaRevisionSeparator', foreground: '#ffa94d' },
+        { token: 'metaRevisionCommitHash', foreground: '#da77f2' },
+        { token: 'metaRevisionWildcard', foreground: '#3bc9db' },
+        { token: 'metaRevisionNegate', foreground: '#ff6b6b' },
     ],
 })
 
@@ -82,6 +89,8 @@ monaco.editor.defineTheme(SOURCEGRAPH_LIGHT, {
         { token: 'openingParen', foreground: '#ae3ec9' },
         { token: 'closingParen', foreground: '#ae3ec9' },
         { token: 'comment', foreground: '#d9480f' },
+        // Sourcegraph meta language
+        { token: 'pathMetaSeparator', foreground: '#868e96' },
         // Regexp pattern highlighting
         { token: 'metaRegexpDelimited', foreground: '#c92a2a' },
         { token: 'metaRegexpAssertion', foreground: '#c92a2a' },

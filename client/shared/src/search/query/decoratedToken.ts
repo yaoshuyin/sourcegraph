@@ -11,7 +11,8 @@ import {
     CharacterSet,
     Group,
     Quantifier,
-} from 'regexpp/ast'
+
+import { flatMap } from 'lodash'
 
 /**
  * A DecoratedToken is a type of token used for syntax highlighting, hovers, and diagnostics. All
@@ -24,7 +25,13 @@ export type DecoratedToken = Token | MetaToken
 /**
  * A MetaToken defines a token that is associated with some language-specific metasyntax.
  */
-export type MetaToken = MetaRegexp | MetaStructural | MetaField | MetaRevision | MetaSeparator
+export type MetaToken =
+    | MetaRegexp
+    | MetaStructural
+    | MetaField
+    | MetaRevision
+    | MetaRepoRevisionSeparator
+    | MetaPathSeparator
 
 /**
  * Defines common properties for meta tokens.
@@ -102,8 +109,12 @@ export enum MetaRevisionKind {
  * A token that denotes a separator in the Sourcegraph query language. For example, the '@' in
  * "repo:^foo$@revision" syntax.
  */
-export interface MetaSeparator extends BaseMetaToken {
-    type: 'metaSeparator'
+export interface MetaRepoRevisionSeparator extends BaseMetaToken {
+    type: 'metaRepoRevisionSeparator'
+}
+
+export interface MetaPathSeparator extends BaseMetaToken {
+    type: 'metaPathSeparator'
 }
 
 /**
@@ -314,6 +325,44 @@ const mapRegexpMeta = (pattern: Pattern): DecoratedToken[] => {
     return tokens
 }
 
+// Tokenize a literal value like "foo/bar/baz" by a path separator '/'.
+const mapPathMeta = (pattern: Pattern): DecoratedToken[] => {
+    const tokens: DecoratedToken[] = []
+    const offset = pattern.range.start
+    let start = 0
+    let current = 0
+    while (pattern.value[current]) {
+        if (pattern.value[current] === '\\') {
+            current = current + 2 // Continue past escaped value.
+            continue
+        } else if (pattern.value[current] === '/') {
+            tokens.push({
+                type: 'literal',
+                range: { start: offset + start, end: offset + current - 1 },
+                value: pattern.value.slice(start, current),
+            })
+            tokens.push({
+                type: 'metaPathSeparator',
+                range: { start: offset + current, end: offset + current + 1 },
+                value: '/',
+            })
+            current = current + 1
+            start = current
+            continue
+        }
+        current = current + 1
+    }
+    // Push last token.
+    tokens.push({
+        type: 'pattern',
+        range: { start: offset + start, end: offset + current },
+        value: pattern.value.slice(start, current),
+        kind: PatternKind.Regexp,
+    })
+    console.log(`result: ${JSON.stringify(tokens)}`)
+    return tokens
+}
+
 const mapRevisionMeta = (token: Literal): DecoratedToken[] => {
     const offset = token.range.start
 
@@ -331,18 +380,33 @@ const mapRevisionMeta = (token: Literal): DecoratedToken[] => {
     // Appends a decorated token to the list of tokens, and resets the current accumulator to be empty.
     const appendDecoratedToken = (endIndex: number): void => {
         const value = accumulator.join('')
+        console.log(`value is ${value}`)
         let kind
         switch (value) {
             case ':':
                 kind = MetaRevisionKind.Separator
+                break
             case '*':
                 kind = MetaRevisionKind.Wildcard
+                break
             case '!':
                 kind = MetaRevisionKind.Negate
+                break
             default:
                 if (value.includes('/')) {
-                    kind = MetaRevisionKind.PathLike
-                } else if (value.match(/[\dA-Fa-f]+/)) {
+                    const range = { start: offset + endIndex - value.length, end: offset + endIndex }
+                    decorated.push(
+                        ...mapPathMeta({
+                            type: 'pattern',
+                            kind: PatternKind.Regexp,
+                            range,
+                            value,
+                        })
+                    )
+                    accumulator = []
+                    return
+                }
+                if ((value.match(/^[\dA-Fa-f]+$/) && value.length > 6) || value.match(/^head$/i)) {
                     kind = MetaRevisionKind.CommitHash
                 } else {
                     kind = MetaRevisionKind.Label
@@ -359,11 +423,16 @@ const mapRevisionMeta = (token: Literal): DecoratedToken[] => {
             case ':':
             case '*':
             case '!':
-                appendDecoratedToken(start - 1)
+                appendDecoratedToken(start - 1) // append up to this special character
+                accumulator.push(current)
+                appendDecoratedToken(start)
+                break
             default:
                 accumulator.push(current)
         }
     }
+    appendDecoratedToken(start)
+    console.log(`decorated ${JSON.stringify(decorated)}`)
     return decorated
 }
 
@@ -511,6 +580,11 @@ export const hasRegexpValue = (field: string): boolean => {
     }
 }
 
+const specifiesRevision = (value: string): boolean => {
+    const [, revision] = value.split('@', 2)
+    return revision !== undefined && revision.length > 0
+}
+
 export const decorate = (token: Token): DecoratedToken[] => {
     const decorated: DecoratedToken[] = []
     switch (token.type) {
@@ -533,7 +607,13 @@ export const decorate = (token: Token): DecoratedToken[] => {
                 range: token.field.range,
                 value: token.field.value,
             })
-            if (token.value && token.field.value.toLowerCase() === 'repo' && token.value.type === 'literal') {
+            // TODO deal with repo and rev aliases
+            if (
+                token.value &&
+                token.field.value.toLowerCase() === 'repo' &&
+                token.value.type === 'literal' &&
+                specifiesRevision(token.value.value)
+            ) {
                 const [repo, revision] = token.value.value.split('@', 2)
                 const offset = token.value.range.start
                 console.log(`repo ${repo} rev ${revision}`)
@@ -546,7 +626,7 @@ export const decorate = (token: Token): DecoratedToken[] => {
                     })
                 )
                 decorated.push({
-                    type: 'metaSeparator',
+                    type: 'metaRepoRevisionSeparator',
                     value: '@',
                     range: {
                         start: offset + repo.length,
@@ -563,6 +643,14 @@ export const decorate = (token: Token): DecoratedToken[] => {
                         },
                     })
                 )
+            } else if (token.value && token.field.value.toLowerCase() === 'rev' && token.value.type === 'literal') {
+                decorated.push(
+                    ...mapRevisionMeta({
+                        type: 'literal',
+                        value: token.value.value,
+                        range: token.value.range,
+                    })
+                )
             } else if (token.value && token.value.type === 'literal' && hasRegexpValue(token.field.value)) {
                 // Highlight fields with regexp values.
                 decorated.push(
@@ -571,6 +659,9 @@ export const decorate = (token: Token): DecoratedToken[] => {
                         kind: PatternKind.Regexp,
                         value: token.value.value,
                         range: token.value.range,
+                    }).flatMap(decoratedToken => {
+                        console.log(`path meta for ${JSON.stringify(decoratedToken)}`)
+                        return decoratedToken.type === 'pattern' ? mapPathMeta(decoratedToken) : [decoratedToken]
                     })
                 )
             } else if (token.value) {
@@ -581,7 +672,6 @@ export const decorate = (token: Token): DecoratedToken[] => {
         default:
             decorated.push(token)
     }
-    console.log(`decorated is ${JSON.stringify(decorated)}`)
     return decorated
 }
 
@@ -593,7 +683,8 @@ const decoratedToMonaco = (token: DecoratedToken): Monaco.languages.IToken => {
         case 'comment':
         case 'openingParen':
         case 'closingParen':
-        case 'metaSeparator':
+        case 'metaRepoRevisionSeparator':
+        case 'metaPathSeparator':
             return {
                 startIndex: token.range.start,
                 scopes: token.type,
